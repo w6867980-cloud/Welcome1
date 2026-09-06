@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIP Game - Online Auth & Gaming Hub</title>
+
+    <!-- 🔥 Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        :root { 
+            --bg-dark: #070a12; 
+            --card-dark: #121826; 
+            --primary-red: #e11d48; 
+            --text-light: #f8fafc; 
+            --accent-yellow: #f1c40f; 
+            --neon-blue: #06b6d4;
+            --neon-green: #10b981;
+            --gray-text: #94a3b8;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-light); padding: 12px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding-top: 40px; position: relative; }
+        
+        /* 🌟 लॉगिन फॉर्म कंटेनर (कोड 1) */
+        .auth-container { width: 100%; max-width: 420px; background: #171e2e; border-radius: 20px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.08); margin-top: 20px; }
+        h2 { text-align: center; color: var(--primary-red); margin-bottom: 20px; font-size: 22px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 5px; }
+        input { width: 100%; padding: 12px; border: 1px solid #334155; border-radius: 10px; background: #0b0f19; color: white; font-size: 14px; outline: none; }
+        input:focus { border-color: var(--primary-red); }
+        .btn-auth { width: 100%; padding: 14px; background: linear-gradient(90deg, #e11d48, #991b1b); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-auth:hover { opacity: 0.9; }
+        .switch-link { text-align: center; margin-top: 15px; font-size: 13px; color: var(--accent-yellow); cursor: pointer; }
+        .policy-box { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: #94a3b8; }
+        .policy-box input { width: auto; }
+
+        /* 🌟 स्वचालित शुभकामनाएं बैनर (Toast Notification - कोड 1) */
+        #toast-msg {
+            display: none;
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(90deg, #10b981, #047857);
+            color: white;
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: bold;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+            z-index: 3000;
+            text-align: center;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+
+        /* 🎮 मेन पोर्टल कंटेनर (कोड 2) */
+        .main-container { width: 100%; max-width: 460px; z-index: 10; display: none; }
+        
+        /* 🚀 आकर्षक टॉप मार्की */
+        .marquee-container {
+            position: fixed; top: 0; left: 0; width: 100%; background: linear-gradient(90deg, #7f1d1d, #e11d48, #9333ea);
+            color: #fff; font-size: 11px; font-weight: bold; padding: 6px 0; z-index: 2000; box-shadow: 0 4px 15px rgba(225,29,72,0.4);
+        }
+
+        /* 👤 VIP यूज़र हेडर */
+        .header-box { 
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; width: 100%; gap: 10px; 
+            background: rgba(255,255,255,0.04); backdrop-filter: blur(10px); padding: 12px 14px; border-radius: 14px; 
+            border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .user-welcome-title { font-size: 14px; font-weight: 800; color: var(--accent-yellow); text-shadow: 0 0 8px rgba(241,196,15,0.3); }
+        .user-details-sub { font-size: 11px; color: var(--gray-text); margin-top: 3px; font-weight: 500; }
+        .logout-btn { background: #334155; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .logout-btn:hover { background: var(--primary-red); }
+
+        /* 💰 3D कार्ड वाले वॉलेट में 3 बटन */
+        .wallet-card { 
+            background: linear-gradient(135deg, #881337 0%, #be123c 50%, #4c1d95 100%); padding: 20px; 
+            border-radius: 20px; margin-bottom: 18px; box-shadow: 0 10px 30px rgba(225,29,72,0.35), inset 0 1px 2px rgba(255,255,255,0.3); 
+            text-align: center; border: 1px solid rgba(255,255,255,0.15);
+        }
+        .wallet-amount { font-size: 34px; font-weight: 900; margin: 8px 0; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        
+        .btn-group { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+        .action-btn {
+            flex: 1; background: #ffffff; color: #000; border: none; padding: 12px 6px;
+            border-radius: 12px; font-weight: 800; font-size: 11px; cursor: pointer; text-decoration: none; 
+            display: inline-block; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .action-btn:active { transform: scale(0.96); }
+        .action-btn.withdraw-btn { background: var(--accent-yellow); color: #000; box-shadow: 0 4px 15px rgba(241, 196, 15, 0.4); }
+        .action-btn.bonus-btn { background: linear-gradient(135deg, #10b981, #059669); color: #fff; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); }
+
+        .game-list-title { font-size: 15px; font-weight: 800; margin-bottom: 12px; color: var(--accent-yellow); border-left: 4px solid var(--primary-red); padding-left: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        /* 🎨 3D Next-Gen VIP कार्ड स्टाइलिंग */
+        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; perspective: 1000px; }
+        .game-card { 
+            background: linear-gradient(145deg, #1e293b, #0f172a); 
+            border: 1px solid rgba(241, 196, 15, 0.25); 
+            border-radius: 16px; 
+            overflow: hidden; 
+            text-decoration: none; 
+            color: white; 
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; 
+            display: flex; 
+            flex-direction: column; 
+            cursor: pointer; 
+            box-shadow: 0 8px 16px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.15);
+            position: relative;
+        }
+        .game-card:hover { 
+            border-color: var(--accent-yellow); 
+            transform: translateY(-5px) scale(1.02); 
+            box-shadow: 0 12px 25px rgba(241, 196, 15, 0.35), 0 0 20px rgba(225, 29, 72, 0.3);
+        }
+        
+        .game-img-wrapper { position: relative; width: 100%; height: 110px; overflow: hidden; background: #000; }
+        .game-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; filter: contrast(105%) brightness(95%); }
+        .game-card:hover .game-img { transform: scale(1.12); }
+        .game-img-wrapper::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(0,0,0,0) 40%, rgba(18, 24, 38, 0.95) 100%);
+        }
+
+        .game-info { padding: 8px 6px 10px 6px; text-align: center; position: relative; z-index: 2; }
+        .game-name { font-size: 12px; font-weight: 800; display: block; margin-bottom: 2px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); color: #fff; }
+        .game-status { font-size: 10px; color: var(--neon-green); font-weight: bold; text-shadow: 0 0 5px rgba(16, 185, 129, 0.5); }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); backdrop-filter: blur(5px); z-index: 1000; justify-content: center; align-items: center; padding: 15px; }
+        .modal-content { background: var(--card-dark); border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; padding: 22px; width: 100%; max-width: 420px; text-align: center; position: relative; box-shadow: 0 15px 35px rgba(0,0,0,0.8); }
+        .input-style { width: 100%; padding: 12px; margin: 8px 0; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.4); color: white; text-align: center; font-size: 13px; outline: none; }
+
+        .auth-tabs { display: flex; gap: 10px; margin-bottom: 14px; }
+        .tab-btn { flex: 1; padding: 10px; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 12px; }
+        .tab-btn.active { background: var(--primary-red); border-color: var(--primary-red); box-shadow: 0 0 10px rgba(225,29,72,0.5); }
+
+        .help-icon-btn { position: fixed; bottom: 20px; right: 20px; width: 52px; height: 52px; background: #25D366; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 26px; cursor: pointer; box-shadow: 0 4px 20px rgba(37,211,102,0.5); z-index: 999; }
+
+        #fireworksCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1500; display: none; }
+    </style>
+</head>
+<body>
+
+<canvas id="fireworksCanvas"></canvas>
+
+<!-- 🌟 शुभकामनाएँ सूचना बॉक्स (कोड 1) -->
+<div id="toast-msg">💐 हार्दिक शुभकामनाएँ! आपकी ID सफलतापूर्वक लॉगिन हो गई है।</div>
+
+<div class="marquee-container">
+    <marquee scrollamount="4">
+        🔥 मार्केट में नया लॉन्च! 16 लाइव VIP गेम्स खेलें। 5 मिनट में लाइव रिजल्ट पाएं। दोस्तों को रेफर करें और डेली बोनस क्लेम करें!
+    </marquee>
+</div>
+
+<!-- 🔑 लॉगिन / रजिस्टर / पासवर्ड रीसेट स्क्रीन (कोड 1) -->
+<div class="auth-container" id="authSection">
+    <!-- 🔑 1. लॉगिन फॉर्म -->
+    <div id="login-box">
+        <h2>लॉगिन करें</h2>
+        <div class="form-group">
+            <label>मोबाइल नंबर</label>
+            <input type="number" id="login-phone" placeholder="अपना 10 अंकों का नंबर डालें">
+        </div>
+        <div class="form-group">
+            <label>पासवर्ड</label>
+            <input type="password" id="login-pass" placeholder="अपना पासवर्ड दर्ज करें">
+        </div>
+        <button class="btn-auth" id="login-btn" onclick="handleLogin()">प्रवेश करें</button>
+        <div class="switch-link" onclick="toggleForm('register')">नया अकाउंट बनाएं</div>
+        <div class="switch-link" style="color: #64748b; font-size: 12px;" onclick="toggleForm('forgot')">पासवर्ड भूल गए? यहाँ से रीसेट करें</div>
+    </div>
+
+    <!-- 📝 2. नया अकाउंट फॉर्म -->
+    <div id="register-box" style="display:none;">
+        <h2>नया अकाउंट बनाएं</h2>
+        <div class="form-group">
+            <label>पूरा नाम</label>
+            <input type="text" id="reg-name" placeholder="अपना नाम दर्ज करें">
+        </div>
+        <div class="form-group">
+            <label>मोबाइल नंबर</label>
+            <input type="number" id="reg-phone" placeholder="10 अंकों का मोबाइल नंबर">
+        </div>
+        <div class="form-group">
+            <label>पासवर्ड बनाएं</label>
+            <input type="password" id="reg-pass" placeholder="कम से कम 4 अंक/अक्षर (1 नंबर जरूरी)">
+        </div>
+        
+        <div class="policy-box">
+            <input type="checkbox" id="reg-policy" checked>
+            <label for="reg-policy" style="margin:0;">मैं नियम और गोपनीयता नीति (Terms & Privacy Policy) से सहमत हूँ।</label>
+        </div>
+
+        <button class="btn-auth" onclick="handleRegister()">अकाउंट बनाएं</button>
+        <div class="switch-link" onclick="toggleForm('login')">पहले से अकाउंट है? लॉगिन करें</div>
+    </div>
+
+    <!-- 🔐 3. पासवर्ड रीसेट फॉर्म -->
+    <div id="forgot-box" style="display:none;">
+        <h2>पासवर्ड रीसेट करें</h2>
+        <p style="font-size: 12px; color:#94a3b8; margin-bottom:15px; text-align:center;">अपना रजिस्टर्ड नाम, नंबर और नया पासवर्ड डालें।</p>
+        <div class="form-group">
+            <label>रजिस्टर्ड नाम</label>
+            <input type="text" id="reset-name" placeholder="अपना नाम दर्ज करें">
+        </div>
+        <div class="form-group">
+            <label>रजिस्टर्ड मोबाइल नंबर</label>
+            <input type="number" id="reset-phone" placeholder="अपना नंबर डालें">
+        </div>
+        <div class="form-group">
+            <label>नया पासवर्ड (कम से कम 1 गिनती आवश्यक)</label>
+            <input type="password" id="reset-newpass" placeholder="नया मजबूत पासवर्ड सेट करें">
+        </div>
+        <button class="btn-auth" onclick="handlePasswordReset()">पासवर्ड अपडेट करें</button>
+        <div class="switch-link" onclick="toggleForm('login')">वापस लॉगिन पर जाएं</div>
+    </div>
+</div>
+
+<!-- 🎮 मुख्य गेमिंग पोर्टल डैशबोर्ड (कोड 2) -->
+<div class="main-container" id="mainDashboard">
+    <div class="header-box">
+        <div>
+            <div class="user-welcome-title">स्वागत है, <span id="user-display-name">गेस्ट यूज़र</span> 👋</div>
+            <div class="user-details-sub">📱 <span id="user-phone-display">0000000000</span> | UID: <span id="user-uid">000000</span></div>
+        </div>
+        <button class="logout-btn" onclick="logoutUser()">🚪 लॉगआउट</button>
+    </div>
+
+    <!-- 💰 3 बटन वाला कनेक्टेड वॉलेट -->
+    <div class="wallet-card">
+        <div style="font-size:12px; opacity: 0.9; font-weight:600; letter-spacing:0.5px;">मुख्य वॉलेट बैलेंस</div>
+        <div class="wallet-amount">₹<span id="main-balance">0.00</span></div>
+        <div class="btn-group">
+            <a href="add-money.html" class="action-btn">⚡ पैसे जोड़ें</a>
+            <a href="withdraw.html" class="action-btn withdraw-btn">💰 निकासी</a>
+            <a href="daily-bonus.html" class="action-btn bonus-btn">🎁 डेली बोनस</a>
+        </div>
+    </div>
+
+    <div class="game-list-title">🎮 16 नए VIP गेम्स:</div>
+    <div class="game-grid" id="gameGridContainer"></div>
+</div>
+
+<!-- 🔑 वैकल्पिक मोडल (कोड 2) -->
+<div id="loginModal" class="modal">
+    <div class="modal-content">
+        <div class="auth-tabs">
+            <button id="tabLogin" class="tab-btn active" onclick="switchTab('login')">🔑 लॉगिन</button>
+            <button id="tabRegister" class="tab-btn" onclick="switchTab('register')">📝 नया अकाउंट</button>
+        </div>
+
+        <input type="text" id="loginName" class="input-style" placeholder="आपका पूरा नाम" style="display:none;">
+        <input type="tel" id="loginPhone" class="input-style" placeholder="10 अंकों का मोबाइल नंबर" maxlength="10">
+        <input type="password" id="loginPass" class="input-style" placeholder="पासवर्ड">
+        
+        <button id="authSubmitBtn" class="action-btn" style="width:100%; margin-top:10px; background:var(--neon-green); color:#000;" onclick="submitAuth()">लॉगिन करें</button>
+    </div>
+</div>
+
+<div class="help-icon-btn" onclick="window.open('https://wa.me/919219078492', '_blank')">💬</div>
+
+<script>
+    // 🔥 Firebase Config Setup (दोनों कोड का समान कन्फिगरेशन)
+    const firebaseConfig = {
+        apiKey: "AIzaSyDUMcJly0ar9hjS8mmkZKizF9fZgwvTz_E",
+        authDomain: "double-bang-game.firebaseapp.com",
+        databaseURL: "https://double-bang-game-default-rtdb.firebaseio.com",
+        projectId: "double-bang-game",
+        storageBucket: "double-bang-game.firebasestorage.app",
+        messagingSenderId: "1022652972426",
+        appId: "1:1022652972426:web:ff7ba6bb61f5a7a78a1c73",
+        measurementId: "G-QKXH27RQQS"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+
+    // ------------------ कोड 1 के फंक्शन्स ------------------
+    function toggleForm(type) {
+        document.getElementById('login-box').style.display = type === 'login' ? 'block' : 'none';
+        document.getElementById('register-box').style.display = type === 'register' ? 'block' : 'none';
+        document.getElementById('forgot-box').style.display = type === 'forgot' ? 'block' : 'none';
+    }
+
+    function hasNumber(str) {
+        return /\d/.test(str);
+    }
+
+    // 1. नया अकाउंट बनाना
+    function handleRegister() {
+        let name = document.getElementById('reg-name').value.trim();
+        let phone = document.getElementById('reg-phone').value.trim();
+        let pass = document.getElementById('reg-pass').value.trim();
+        let policyChecked = document.getElementById('reg-policy').checked;
+
+        if (!name) {
+            alert('कृपया अपना नाम दर्ज करें!');
+            return;
+        }
+        if (phone.length < 10) {
+            alert('कृपया 10 अंकों का सही मोबाइल नंबर दर्ज करें!');
+            return;
+        }
+        if (pass.length < 4 || !hasNumber(pass)) {
+            alert('पासवर्ड में कम से कम 4 अक्षर और न्यूनतम 1 गिनती (संख्या) होनी चाहिए!');
+            return;
+        }
+        if (!policyChecked) {
+            alert('कृपया नियम और गोपनीयता नीति स्वीकार करें!');
+            return;
+        }
+
+        let userRef = db.ref('users/' + phone);
+        userRef.once('value').then(snapshot => {
+            if (snapshot.exists()) {
+                alert('यह मोबाइल नंबर पहले से ही सर्वर पर दर्ज है! कृपया सीधे लॉगिन करें।');
+                toggleForm('login');
+                document.getElementById('login-phone').value = phone;
+            } else {
+                let newUser = {
+                    name: name,
+                    phone: phone,
+                    password: pass,
+                    uid: Math.floor(100000 + Math.random() * 900000),
+                    balance: 0.00, // 🎯 यहाँ बदलाव किया गया: अब नए यूजर को ₹0.00 दिखेंगे
+                    createdAt: new Date().toISOString()
+                };
+
+                userRef.set(newUser).then(() => {
+                    alert('🎉 बधाई हो! आपका नया ऑनलाइन अकाउंट सफलतापूर्वक बन गया है।');
+                    toggleForm('login');
+                    document.getElementById('login-phone').value = phone;
+                }).catch(error => {
+                    alert('सर्वर एरर: ' + error.message);
+                });
+            }
+        });
+    }
+
+    // 2. ⚡ ऑटोमैटिक लॉगिन और शुभकामनाएं संदेश (पेज स्विच लॉजिक)
+    function handleLogin() {
+        let phone = document.getElementById('login-phone').value.trim();
+        let pass = document.getElementById('login-pass').value.trim();
+
+        if (!phone || !pass) {
+            alert('कृपया मोबाइल नंबर और पासवर्ड दोनों दर्ज करें!');
+            return;
+        }
+
+        let loginBtn = document.getElementById('login-btn');
+        loginBtn.innerText = "प्रवेश हो रहा है...";
+        loginBtn.disabled = true;
+
+        db.ref('users/' + phone).once('value').then(snapshot => {
+            if (snapshot.exists()) {
+                let userData = snapshot.val();
+                if (userData.password === pass) {
+                    sessionStorage.setItem('game_current_user', phone);
+                    localStorage.setItem('game_current_user', phone);
+                    
+                    // 🌟 ऑन-स्क्रीन शुभकामनाएँ संदेश दिखाएं
+                    let toast = document.getElementById('toast-msg');
+                    toast.style.display = 'block';
+
+                    // 🔄 1.2 सेकंड में ऑटोमैटिक गेम डैशबोर्ड पर भेजें
+                    setTimeout(() => {
+                        toast.style.display = 'none';
+                        loginBtn.innerText = "प्रवेश करें";
+                        loginBtn.disabled = false;
+                        triggerFireworks();
+                        initSystem();
+                    }, 1200);
+
+                } else {
+                    alert('❌ गलत पासवर्ड! कृपया सही पासवर्ड दर्ज करें।');
+                    loginBtn.innerText = "प्रवेश करें";
+                    loginBtn.disabled = false;
+                }
+            } else {
+                alert('❌ यह मोबाइल नंबर रजिस्टर्ड नहीं है! पहले नया अकाउंट बनाएं।');
+                loginBtn.innerText = "प्रवेश करें";
+                loginBtn.disabled = false;
+            }
+        });
+    }
+
+    // 3. पासवर्ड रीसेट
+    function handlePasswordReset() {
+        let name = document.getElementById('reset-name').value.trim();
+        let phone = document.getElementById('reset-phone').value.trim();
+        let newPass = document.getElementById('reset-newpass').value.trim();
+
+        if (!name || phone.length < 10) {
+            alert('कृपया सही नाम और 10 अंकों का रजिस्टर्ड मोबाइल नंबर दर्ज करें!');
+            return;
+        }
+
+        if (newPass.length < 4 || !hasNumber(newPass)) {
+            alert('❌ पासवर्ड रीसेट असफल! नए पासवर्ड में कम से कम 1 गिनती (संख्या) होना अनिवार्य है।');
+            return;
+        }
+
+        let userRef = db.ref('users/' + phone);
+        userRef.once('value').then(snapshot => {
+            if (!snapshot.exists()) {
+                alert('❌ यह मोबाइल नंबर हमारे रिकॉर्ड में नहीं मिला!');
+            } else {
+                let userData = snapshot.val();
+                
+                if (userData.name && userData.name.toLowerCase() !== name.toLowerCase()) {
+                    alert('❌ दर्ज किया गया नाम इस मोबाइल नंबर के रिकॉर्ड से मैच नहीं हुआ!');
+                    return;
+                }
+
+                userRef.update({ password: newPass }).then(() => {
+                    alert('🔐 शुभकामनाएँ! आपका पासवर्ड सफलतापूर्वक रीसेट हो गया है। अब लॉगिन करें।');
+                    toggleForm('login');
+                    document.getElementById('login-phone').value = phone;
+                });
+            }
+        });
+    }
+
+
+    // ------------------ कोड 2 के फंक्शन्स ------------------
+    let currentAuthMode = 'login';
+    let currentUser = localStorage.getItem('game_current_user') || sessionStorage.getItem('game_current_user') || null;
+
+    const gamesList = [
+        { name: "छोटा या बड़ा (Win Go)", url: "game1.html", img: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&q=80" },
+        { name: "ताश खेलने वाला", url: "game2.html", img: "https://images.unsplash.com/photo-1511193311914-0346f16efe90?w=500&q=80" },
+        { name: "हेलीकॉप्टर (Aviator)", url: "game3.html", img: "https://images.unsplash.com/photo-1508614589041-895b88991e3e?w=500&q=80" },
+        { name: "स्टॉक मार्केट", url: "game4.html", img: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=500&q=80" },
+        { name: "लूडो किंग", url: "game5.html", img: "https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?w=500&q=80" },
+        { name: "सांप सीढ़ी", url: "game6.html", img: "https://images.unsplash.com/photo-1606167668584-78701c57f13d?w=500&q=80" },
+        { name: "क्रिकेट मैच", url: "game7.html", img: "https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=500&q=80" },
+        { name: "फुटबॉल", url: "game8.html", img: "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=500&q=80" },
+        { name: "कार रेसिंग", url: "game9.html", img: "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=500&q=80" },
+        { name: "अंदर बाहर", url: "game10.html", img: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=500&q=80" },
+        { name: "माइन ब्लास्ट", url: "game11.html", img: "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=500&q=80" },
+        { name: "कैसीनो रूलेट", url: "game12.html", img: "https://images.unsplash.com/photo-1596838132731-3301c3fd4317?w=500&q=80" },
+        { name: "ड्रैगन वीएस टाइगर", url: "game13.html", img: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&q=80" },
+        { name: "लकी फ्रूट्स", url: "game14.html", img: "https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=500&q=80" },
+        { name: "3D डाइस", url: "game15.html", img: "https://images.unsplash.com/photo-1522069169874-c58ec4b76be5?w=500&q=80" },
+        { name: "व्हील ऑफ फॉर्च्यून", url: "game16.html", img: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=500&q=80" }
+    ];
+
+    function switchTab(type) {
+        currentAuthMode = type;
+        if(type === 'register') {
+            document.getElementById('tabRegister').classList.add('active');
+            document.getElementById('tabLogin').classList.remove('active');
+            document.getElementById('loginName').style.display = 'block';
+            document.getElementById('authSubmitBtn').innerText = 'अकाउंट बनाएं';
+        } else {
+            document.getElementById('tabLogin').classList.add('active');
+            document.getElementById('tabRegister').classList.remove('active');
+            document.getElementById('loginName').style.display = 'none';
+            document.getElementById('authSubmitBtn').innerText = 'लॉगिन करें';
+        }
+    }
+
+    function initSystem() {
+        currentUser = localStorage.getItem('game_current_user') || sessionStorage.getItem('game_current_user');
+
+        if (!currentUser) {
+            document.getElementById('authSection').style.display = 'block';
+            document.getElementById('mainDashboard').style.display = 'none';
+            return;
+        }
+
+        document.getElementById('authSection').style.display = 'none';
+        document.getElementById('mainDashboard').style.display = 'block';
+
+        // 🔗 मेन वॉलेट रियल-टाइम सिंक लॉजिक
+        db.ref('users/' + currentUser).on('value', (snapshot) => {
+            let u = snapshot.val();
+            if (u) {
+                document.getElementById('user-display-name').innerText = u.name || "यूज़र";
+                document.getElementById('user-phone-display').innerText = u.phone || currentUser;
+                document.getElementById('user-uid').innerText = u.uid || "100001";
+                document.getElementById('main-balance').innerText = (parseFloat(u.balance) || 0).toFixed(2);
+                closeModal('loginModal');
+            } else {
+                document.getElementById('authSection').style.display = 'block';
+                document.getElementById('mainDashboard').style.display = 'none';
+            }
+        });
+
+        renderGames();
+    }
+
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    function submitAuth() {
+        let name = document.getElementById('loginName').value.trim();
+        let phone = document.getElementById('loginPhone').value.trim();
+        let pass = document.getElementById('loginPass').value.trim();
+
+        if (phone.length !== 10 || pass === "") {
+            alert('कृपया 10 अंकों का मोबाइल नंबर और पासवर्ड दर्ज करें!');
+            return;
+        }
+
+        let userRef = db.ref('users/' + phone);
+
+        if (currentAuthMode === 'register') {
+            if (name === "") {
+                alert('कृपया अपना पूरा नाम दर्ज करें!');
+                return;
+            }
+            userRef.once('value').then(snapshot => {
+                if (snapshot.exists()) {
+                    alert('यह मोबाइल नंबर पहले से रजिस्टर्ड है! कृपया लॉगिन करें।');
+                    switchTab('login');
+                } else {
+                    let randomUID = Math.floor(100000 + Math.random() * 900000);
+                    let newUser = {
+                        name: name,
+                        phone: phone,
+                        password: pass,
+                        uid: randomUID,
+                        balance: 0.00
+                    };
+                    userRef.set(newUser).then(() => {
+                        localStorage.setItem('game_current_user', phone);
+                        sessionStorage.setItem('game_current_user', phone);
+                        alert(`🎉 स्वागत है ${name}! आपकी आईडी बन गई है।`);
+                        triggerFireworks();
+                        closeModal('loginModal');
+                        initSystem();
+                    });
+                }
+            });
+        } else {
+            userRef.once('value').then(snapshot => {
+                if (!snapshot.exists()) {
+                    alert('यह मोबाइल नंबर रजिस्टर्ड नहीं है! कृपया पहले "नया अकाउंट" बनाएं।');
+                    switchTab('register');
+                } else {
+                    let existingUser = snapshot.val();
+                    if (existingUser.password === pass) {
+                        localStorage.setItem('game_current_user', phone);
+                        sessionStorage.setItem('game_current_user', phone);
+                        alert(`✅ स्वागत है ${existingUser.name || 'यूज़र'}! आप सफलतापूर्वक लॉगिन हो गए हैं।`);
+                        triggerFireworks();
+                        closeModal('loginModal');
+                        initSystem();
+                    } else {
+                        alert('गलत पासवर्ड! कृपया सही पासवर्ड दर्ज करें।');
+                    }
+                }
+            });
+        }
+    }
+
+    function logoutUser() {
+        if(confirm("क्या आप अपनी आईडी लॉगआउट करना चाहते हैं?")) {
+            localStorage.removeItem('game_current_user');
+            sessionStorage.removeItem('game_current_user');
+            currentUser = null;
+            location.reload();
+        }
+    }
+
+    function renderGames() {
+        let html = "";
+        gamesList.forEach((game, idx) => {
+            html += `<div class="game-card" onclick="openGame(${idx})">
+                <div class="game-img-wrapper">
+                    <img class="game-img" src="${game.img}" alt="${game.name}" loading="lazy">
+                </div>
+                <div class="game-info">
+                    <span class="game-name">${idx + 1}. ${game.name}</span>
+                    <span class="game-status">● प्ले करें</span>
+                </div>
+            </div>`;
+        });
+        document.getElementById('gameGridContainer').innerHTML = html;
+    }
+
+    function openGame(index) {
+        if (!currentUser) return;
+        db.ref('users/' + currentUser + '/balance').once('value').then(snapshot => {
+            let balance = snapshot.val() || 0;
+            if (balance < 10) {
+                alert('गेम खेलने के लिए न्यूनतम ₹10 बैलेंस आवश्यक है! कृपया पैसे जोड़ें।');
+                return;
+            }
+            window.location.href = gamesList[index].url;
+        });
+    }
+
+    function triggerFireworks() {
+        const canvas = document.getElementById('fireworksCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.style.display = 'block';
+        
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+        
+        let particles = [];
+        let colors = ['#f1c40f', '#e11d48', '#06b6d4', '#10b981', '#ffffff', '#ff007f'];
+
+        function createParticle(x, y) {
+            let count = 50;
+            for (let i = 0; i < count; i++) {
+                let angle = Math.random() * Math.PI * 2;
+                let speed = Math.random() * 6 + 2;
+                particles.push({
+                    x: x, y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    alpha: 1,
+                    decay: Math.random() * 0.02 + 0.015
+                });
+            }
+        }
+
+        createParticle(width * 0.3, height * 0.4);
+        setTimeout(() => createParticle(width * 0.7, height * 0.3), 300);
+        setTimeout(() => createParticle(width * 0.5, height * 0.5), 600);
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            for (let i = 0; i < particles.length; i++) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.decay;
+                ctx.globalAlpha = Math.max(0, p.alpha);
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            particles = particles.filter(p => p.alpha > 0);
+            if (particles.length > 0) {
+                requestAnimationFrame(animate);
+            } else {
+                canvas.style.display = 'none';
+            }
+        }
+        animate();
+    }
+
+    // ऑटो-इनिस्ट्रियलाइज़ेशन
+    window.onload = initSystem;
+</script>
+</body>
+</html>

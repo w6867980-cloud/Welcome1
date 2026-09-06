@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>निकासी - डबल धमाका गेम</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        :root { 
+            --bg-dark: #070a12; 
+            --card-dark: #121826; 
+            --primary-red: #e11d48; 
+            --text-light: #f8fafc; 
+            --accent-yellow: #f1c40f; 
+            --neon-green: #10b981;
+            --gray-text: #94a3b8;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-light); padding: 12px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .main-container { width: 100%; max-width: 460px; text-align: center; }
+        .header-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px; }
+        .back-btn { background: #1e293b; color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: bold; text-decoration: none; }
+        
+        .wallet-card { background: linear-gradient(135deg, #701a75 0%, #4c1d95 50%, #e11d48 100%); padding: 20px; border-radius: 20px; margin-bottom: 18px; text-align: center; border: 1px solid rgba(255,255,255,0.25); }
+        .wallet-amount { font-size: 34px; font-weight: 800; margin-top: 4px; color: #fff; }
+        
+        .withdraw-container {
+            background: var(--card-dark);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 18px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .section-title { font-size: 16px; font-weight: 800; color: var(--accent-yellow); margin-bottom: 12px; text-align: center; }
+        
+        .warning-msg-box {
+            background: rgba(241, 196, 15, 0.15);
+            border: 1px solid var(--accent-yellow);
+            color: var(--accent-yellow);
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+            line-height: 1.4;
+            cursor: pointer;
+            user-select: none; /* क्लिक करते वक्त टेक्स्ट सेलेक्ट न हो */
+        }
+
+        .tab-buttons { display: flex; gap: 10px; margin-bottom: 15px; }
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: #1e293b;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            text-align: center;
+        }
+        .tab-btn.active {
+            background: linear-gradient(90deg, #e11d48, #701a75);
+            border-color: var(--accent-yellow);
+        }
+
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 12px; color: var(--gray-text); margin-bottom: 5px; }
+        .form-control {
+            width: 100%;
+            padding: 11px;
+            background: #0f172a;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+        .form-control:focus { border-color: var(--accent-yellow); }
+        .form-control:disabled {
+            background: #1e293b;
+            color: #94a3b8;
+            border-color: rgba(255,255,255,0.05);
+            cursor: not-allowed;
+        }
+
+        .locked-notice {
+            font-size: 11px;
+            color: #ef4444;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(90deg, #10b981, #059669);
+            color: #fff;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        .history-card {
+            background: #0f172a;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .history-details { text-align: left; }
+        .history-type { font-weight: bold; font-size: 14px; color: #fff; }
+        .history-target { font-size: 11px; color: var(--gray-text); margin-top: 2px; }
+        .history-time { font-size: 10px; color: #64748b; margin-top: 4px; }
+        .history-amount { font-weight: 800; font-size: 16px; color: var(--neon-green); text-align: right; }
+        
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: bold; margin-top: 4px; }
+        .badge-pending { background: #b45309; color: #fff; }
+        .badge-processing { background: #1d4ed8; color: #fff; }
+        .badge-success { background: #15803d; color: #fff; }
+        .badge-rejected { background: #b91c1c; color: #fff; }
+        
+        .notif-box { background: #1e1b4b; border: 1px solid #6366f1; border-radius: 10px; padding: 10px; margin-bottom: 15px; font-size: 12px; color: #c7d2fe; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <div class="header-bar">
+        <a href="index.html" class="back-btn">⬅ मुख्य पृष्ठ</a>
+        <h3 style="font-size: 15px; color: var(--accent-yellow);">💸 निकासी पोर्टल</h3>
+        <div></div>
+    </div>
+
+    <!-- एडमिन द्वारा भेजा संदेश / मैसेज बॉक्स -->
+    <div id="adminNotifBox" class="notif-box"></div>
+
+    <!-- मुख्य वॉलेट बैलेंस -->
+    <div class="wallet-card">
+        <div style="font-size:12px; opacity: 0.9;">वर्तमान वॉलेट बैलेंस</div>
+        <div class="wallet-amount">₹<span id="displayBalance">0.00</span></div>
+    </div>
+
+    <!-- विड्रॉल / बैंक निकासी सेक्शन -->
+    <div class="withdraw-container">
+        <div class="section-title">💸 बैलेंस निकासी (Withdrawal)</div>
+
+        <!-- चेतावनी संदेश (इस पर 3 बार क्लिक करने पर एडमिन पासवर्ड खुलेगा) -->
+        <div class="warning-msg-box" onclick="handleAdminTrigger()">
+            ⚠️ कृपया अपने जीते हुए पैसे निकालें वरना आपका पैसा अटक सकता है या रिफंड प्रोसेस में जा सकता है।
+        </div>
+        
+        <!-- टैब बटन -->
+        <div class="tab-buttons">
+            <button class="tab-btn active" id="tabUpiBtn" onclick="switchTab('upi')">📲 UPI ट्रांसफर</button>
+            <button class="tab-btn" id="tabBankBtn" onclick="switchTab('bank')">🏦 बैंक ट्रांसफर</button>
+        </div>
+
+        <!-- 1. UPI निकासी फॉर्म -->
+        <div id="upiForm">
+            <div class="form-group">
+                <label>UPI ID (Google Pay / PhonePe / Paytm):</label>
+                <input type="text" id="upiId" class="form-control" placeholder="उदा. user@upi या 9876543210@paytm">
+                <div id="upiLockNotice" class="locked-notice">🔒 आपकी UPI ID लॉक कर दी गई है और इसे बदला नहीं जा सकता।</div>
+            </div>
+            <div class="form-group">
+                <label>निकासी रकम (₹):</label>
+                <input type="number" id="upiAmount" class="form-control" placeholder="निकाली जाने वाली रकम दर्ज करें">
+            </div>
+            <button class="submit-btn" onclick="processWithdraw('upi')">UPI में भेजें</button>
+        </div>
+
+        <!-- 2. बैंक निकासी फॉर्म -->
+        <div id="bankForm" style="display: none;">
+            <div id="bankLockNotice" class="locked-notice" style="margin-bottom: 10px; font-weight: bold;">🔒 आपकी बैंक डिटेल्स सुरक्षित रूप से लॉक कर दी गई हैं।</div>
+            <div class="form-group">
+                <label>बैंक का नाम चुनें:</label>
+                <select id="bankName" class="form-control">
+                    <option value="">-- बैंक चुनें --</option>
+                    <option value="State Bank of India (SBI)">State Bank of India (SBI)</option>
+                    <option value="Airtel Payments Bank">Airtel Payments Bank</option>
+                    <option value="India Post Payments Bank (IPPB)">India Post Payments Bank (IPPB)</option>
+                    <option value="Jio Payments Bank">Jio Payments Bank</option>
+                    <option value="Bank of Baroda">Bank of Baroda</option>
+                    <option value="Punjab National Bank (PNB)">Punjab National Bank (PNB)</option>
+                    <option value="HDFC Bank">HDFC Bank</option>
+                    <option value="ICICI Bank">ICICI Bank</option>
+                    <option value="Axis Bank">Axis Bank</option>
+                    <option value="Union Bank of India">Union Bank of India</option>
+                    <option value="Central Bank of India">Central Bank of India</option>
+                    <option value="Canara Bank">Canara Bank</option>
+                    <option value="Bank of India">Bank of India</option>
+                    <option value="Paytm Payments Bank">Paytm Payments Bank</option>
+                    <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
+                    <option value="IndusInd Bank">IndusInd Bank</option>
+                    <option value="UCO Bank">UCO Bank</option>
+                    <option value="Indian Bank">Indian Bank</option>
+                    <option value="Bandhan Bank">Bandhan Bank</option>
+                    <option value="Yes Bank">Yes Bank</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>खाताधारक का नाम:</label>
+                <input type="text" id="accountName" class="form-control" placeholder="बैंक पासबुक के अनुसार नाम">
+            </div>
+            <div class="form-group">
+                <label>अकाउंट नंबर:</label>
+                <input type="number" id="accountNumber" class="form-control" placeholder="अपना खाता नंबर दर्ज करें">
+            </div>
+            <div class="form-group">
+                <label>IFSC कोड:</label>
+                <input type="text" id="ifscCode" class="form-control" placeholder="उदा. SBIN0001234">
+            </div>
+            <div class="form-group">
+                <label>निकासी रकम (₹):</label>
+                <input type="number" id="bankAmount" class="form-control" placeholder="निकाली जाने वाली रकम दर्ज करें">
+            </div>
+            <button class="submit-btn" onclick="processWithdraw('bank')">बैंक में भेजें</button>
+        </div>
+    </div>
+
+    <!-- विड्रॉल हिस्ट्री सेक्शन -->
+    <div class="withdraw-container">
+        <div class="section-title">📜 निकासी इतिहास (पिछले 15 दिन)</div>
+        <div id="historyList">
+            <p style="text-align:center; color: var(--gray-text); font-size:12px;">हिस्ट्री लोड हो रही है...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDUMcJly0ar9hjS8mmkZKizF9fZgwvTz_E",
+      authDomain: "double-bang-game.firebaseapp.com",
+      databaseURL: "https://double-bang-game-default-rtdb.firebaseio.com",
+      projectId: "double-bang-game",
+      storageBucket: "double-bang-game.firebasestorage.app",
+      messagingSenderId: "1022652972426",
+      appId: "1:1022652972426:web:ff7ba6bb61f5a7a78a1c73",
+      measurementId: "G-QKXH27RQQS"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+
+    let currentUser = localStorage.getItem('game_current_user') || '7084520775';
+    let currentBalance = 0;
+
+    // --- एडमिन पैनल 3-क्लिक ट्रिगर कोड ---
+    let clickCount = 0;
+    let clickTimer = null;
+
+    function handleAdminTrigger() {
+        clickCount++;
+        if (clickCount === 1) {
+            clickTimer = setTimeout(() => {
+                clickCount = 0;
+            }, 1000); // 1 सेकंड के अंदर 3 बार क्लिक होना चाहिए
+        } else if (clickCount === 3) {
+            clearTimeout(clickTimer);
+            clickCount = 0;
+            
+            let enterPass = prompt("🔐 एडमिन पैनल खोलने के लिए पासवर्ड दर्ज करें:");
+            if (enterPass === "@123narveer7084") {
+                window.location.href = "admin.html"; // आपका एडमिन पेज लिंक
+            } else if (enterPass !== null) {
+                alert("❌ गलत पासवर्ड!");
+            }
+        }
+    }
+    // -------------------------------------
+
+    function switchTab(type) {
+        if(type === 'upi') {
+            document.getElementById('upiForm').style.display = 'block';
+            document.getElementById('bankForm').style.display = 'none';
+            document.getElementById('tabUpiBtn').classList.add('active');
+            document.getElementById('tabBankBtn').classList.remove('active');
+        } else {
+            document.getElementById('upiForm').style.display = 'none';
+            document.getElementById('bankForm').style.display = 'block';
+            document.getElementById('tabBankBtn').classList.add('active');
+            document.getElementById('tabUpiBtn').classList.remove('active');
+        }
+    }
+
+    function initPage() {
+        db.ref('users/' + currentUser).on('value', snapshot => {
+            let user = snapshot.val() || {};
+            currentBalance = parseFloat(user.balance || 0);
+            document.getElementById('displayBalance').innerText = currentBalance.toFixed(2);
+
+            // 1. यदि बैंक विवरण पहले से लॉक/सेव हैं
+            if (user.savedBankDetails && user.savedBankDetails.accountNumber) {
+                document.getElementById('bankName').value = user.savedBankDetails.bankName || "";
+                document.getElementById('accountName').value = user.savedBankDetails.accountName || "";
+                document.getElementById('accountNumber').value = user.savedBankDetails.accountNumber || "";
+                document.getElementById('ifscCode').value = user.savedBankDetails.ifscCode || "";
+
+                // बैंक फ़ील्ड्स को Lock कर दें
+                document.getElementById('bankName').disabled = true;
+                document.getElementById('accountName').disabled = true;
+                document.getElementById('accountNumber').disabled = true;
+                document.getElementById('ifscCode').disabled = true;
+                document.getElementById('bankLockNotice').style.display = 'block';
+            }
+
+            // 2. यदि UPI ID पहले से लॉक/सेव है
+            if (user.savedUpiId) {
+                const upiInput = document.getElementById('upiId');
+                upiInput.value = user.savedUpiId || "";
+                upiInput.disabled = true; // Input को Lock कर दें
+                document.getElementById('upiLockNotice').style.display = 'block';
+            }
+        });
+
+        // एडमिन द्वारा भेजे मैसेज लोड करें
+        db.ref('users/' + currentUser + '/notifications').limitToLast(1).on('value', snapshot => {
+            const notifBox = document.getElementById('adminNotifBox');
+            if(snapshot.exists()) {
+                snapshot.forEach(child => {
+                    let notif = child.val();
+                    notifBox.style.display = 'block';
+                    notifBox.innerHTML = `<strong>📩 एडमिन मैसेज:</strong> ${notif.message}`;
+                });
+            } else {
+                notifBox.style.display = 'none';
+            }
+        });
+
+        loadWithdrawalHistory();
+    }
+
+    function loadWithdrawalHistory() {
+        const fifteenDaysAgo = Date.now() - (15 * 24 * 60 * 60 * 1000);
+        
+        db.ref('withdrawals').orderByChild('user').equalTo(currentUser).on('value', snapshot => {
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '';
+            
+            let hasRecords = false;
+
+            snapshot.forEach(childSnapshot => {
+                const key = childSnapshot.key;
+                const data = childSnapshot.val();
+
+                if (data.timestamp < fifteenDaysAgo) {
+                    db.ref('withdrawals/' + key).remove();
+                    return;
+                }
+
+                hasRecords = true;
+
+                let currentStatus = data.status || "Pending";
+                let badgeClass = "badge-pending";
+
+                if (currentStatus === 'Success') {
+                    currentStatus = "Success ✅";
+                    badgeClass = "badge-success";
+                } else if (currentStatus === 'Processing') {
+                    currentStatus = "Processing ⚙️";
+                    badgeClass = "badge-processing";
+                } else if (currentStatus === 'Rejected') {
+                    currentStatus = "Rejected ❌";
+                    badgeClass = "badge-rejected";
+                } else {
+                    currentStatus = "Pending ⏳";
+                    badgeClass = "badge-pending";
+                }
+
+                let targetDetail = data.type === 'UPI' ? data.upiId : `${data.bankDetails.bankName} (${data.bankDetails.accountNumber})`;
+                let dateStr = new Date(data.timestamp).toLocaleString('hi-IN', {
+                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                });
+
+                let html = `
+                    <div class="history-card">
+                        <div class="history-details">
+                            <div class="history-type">${data.type === 'UPI' ? '📲 UPI विड्रॉल' : '🏦 बैंक ट्रांसफर'}</div>
+                            <div class="history-target">${targetDetail}</div>
+                            <div class="history-time">${dateStr}</div>
+                        </div>
+                        <div>
+                            <div class="history-amount">₹${parseFloat(data.amount).toFixed(2)}</div>
+                            <span class="badge ${badgeClass}">${currentStatus}</span>
+                        </div>
+                    </div>
+                `;
+                historyList.innerHTML = html + historyList.innerHTML;
+            });
+
+            if (!hasRecords) {
+                historyList.innerHTML = '<p style="text-align:center; color: var(--gray-text); font-size:12px;">कोई हालिया विड्रॉल इतिहास नहीं मिला।</p>';
+            }
+        });
+    }
+
+    function processWithdraw(type) {
+        if (type === 'upi') {
+            const upiId = document.getElementById('upiId').value.trim();
+            const amount = parseFloat(document.getElementById('upiAmount').value);
+
+            if (!upiId) {
+                alert("⚠️ कृपया अपनी UPI ID दर्ज करें!");
+                return;
+            }
+            if (isNaN(amount) || amount <= 0) {
+                alert("⚠️ कृपया एक सही निकासी रकम दर्ज करें!");
+                return;
+            }
+            if (amount > currentBalance) {
+                alert("⚠️ आपके पास पर्याप्त बैलेंस नहीं है!");
+                return;
+            }
+
+            const newBalance = currentBalance - amount;
+            db.ref('users/' + currentUser).update({
+                balance: newBalance,
+                savedUpiId: upiId // हमेशा के लिए लॉक डेटाबेस में स्टोर होगा
+            });
+
+            db.ref('withdrawals').push({
+                user: currentUser,
+                type: 'UPI',
+                upiId: upiId,
+                amount: amount,
+                status: 'Pending',
+                timestamp: Date.now()
+            }).then(() => {
+                alert("✅ आपकी UPI निकासी रिक्वेस्ट सफलतापूर्वक दर्ज कर ली गई है!");
+                document.getElementById('upiAmount').value = "";
+            });
+
+        } else if (type === 'bank') {
+            const bankName = document.getElementById('bankName').value;
+            const accountName = document.getElementById('accountName').value.trim();
+            const accountNumber = document.getElementById('accountNumber').value.trim();
+            const ifscCode = document.getElementById('ifscCode').value.trim();
+            const amount = parseFloat(document.getElementById('bankAmount').value);
+
+            if (!bankName || !accountName || !accountNumber || !ifscCode) {
+                alert("⚠️ कृपया बैंक की सभी जानकारी सही-सही भरें!");
+                return;
+            }
+            if (isNaN(amount) || amount <= 0) {
+                alert("⚠️ कृपया एक सही निकासी रकम दर्ज करें!");
+                return;
+            }
+            if (amount > currentBalance) {
+                alert("⚠️ आपके पास पर्याप्त बैलेंस नहीं है!");
+                return;
+            }
+
+            const bankDetails = { bankName, accountName, accountNumber, ifscCode };
+            const newBalance = currentBalance - amount;
+
+            db.ref('users/' + currentUser).update({
+                balance: newBalance,
+                savedBankDetails: bankDetails // बैंक डिटेल्स स्थायी लॉक करने के लिए सेव होगी
+            });
+
+            db.ref('withdrawals').push({
+                user: currentUser,
+                type: 'Bank Transfer',
+                bankDetails: bankDetails,
+                amount: amount,
+                status: 'Pending',
+                timestamp: Date.now()
+            }).then(() => {
+                alert("✅ आपकी बैंक निकासी रिक्वेस्ट सफलतापूर्वक दर्ज कर ली गई है!");
+                document.getElementById('bankAmount').value = "";
+            });
+        }
+    }
+
+    window.onload = initPage;
+</script>
+</body>
+</html>

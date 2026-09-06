@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>डबल धमाका इंडिया गेम - पैसे जोड़ें</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        :root { 
+            --bg-dark: #070a12; --card-dark: #121826; --primary-red: #e11d48; 
+            --text-light: #f8fafc; --accent-yellow: #f1c40f; --neon-green: #10b981;
+            --phonepe-purple: #5f259f; --gray-text: #94a3b8;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-light); padding: 12px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .main-container { width: 100%; max-width: 460px; }
+        .header-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px; }
+        .back-btn { background: #1e293b; color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: bold; text-decoration: none; }
+        .wallet-card { background: linear-gradient(135deg, #701a75 0%, #4c1d95 50%, #e11d48 100%); padding: 20px; border-radius: 20px; margin-bottom: 18px; text-align: center; border: 1px solid rgba(255,255,255,0.25); }
+        .wallet-amount { font-size: 34px; font-weight: 800; margin-top: 4px; color: #fff; }
+        
+        .section-title { font-size: 14px; font-weight: bold; color: var(--accent-yellow); border-left: 4px solid var(--primary-red); padding-left: 8px; margin-bottom: 12px; margin-top: 15px; }
+        .offer-card { background: linear-gradient(145deg, #1a2234, #0d1322); border: 1px solid rgba(241, 196, 15, 0.3); border-radius: 16px; padding: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .offer-pay { font-size: 17px; font-weight: 800; color: #fff; }
+        .offer-get { font-size: 12px; color: var(--neon-green); font-weight: bold; margin-top: 2px; }
+        .badge { background: linear-gradient(90deg, #e11d48, #be123c); color: white; font-size: 10px; padding: 5px 10px; border-radius: 10px; font-weight: bold; }
+        
+        /* गिफ्ट कोड कार्ड और डिस्प्ले स्टाइल */
+        .giftbox-card { background: linear-gradient(135deg, #065f46, #047857); border: 1px dashed var(--accent-yellow); padding: 16px; border-radius: 16px; margin-bottom: 15px; text-align: center; }
+        
+        .generated-gift-display { 
+            display: none; 
+            background: linear-gradient(145deg, #1e1b4b, #311b92); 
+            border: 2px solid var(--accent-yellow); 
+            border-radius: 14px; 
+            padding: 12px; 
+            margin-bottom: 12px; 
+            box-shadow: 0 0 15px rgba(241, 196, 15, 0.4);
+        }
+        .gift-code-badge { font-size: 20px; font-weight: 900; color: var(--accent-yellow); letter-spacing: 2px; margin: 4px 0; background: rgba(0,0,0,0.4); padding: 6px; border-radius: 8px; border: 1px dashed var(--accent-yellow); }
+        .gift-timer { font-size: 12px; color: #f87171; font-weight: bold; margin-top: 4px; }
+
+        .custom-amount-card { background: linear-gradient(145deg, #1e1b4b, #0f172a); border: 1px solid var(--neon-green); padding: 16px; border-radius: 16px; margin-bottom: 15px; text-align: center; }
+        
+        .input-style { width: 100%; padding: 12px; margin: 8px 0; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.6); color: white; text-align: center; font-size: 14px; font-weight: bold; outline: none; }
+        .action-btn { width: 100%; background: var(--neon-green); color: #000; border: none; padding: 13px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; margin-top: 8px; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.94); z-index: 1000; justify-content: center; align-items: center; padding: 12px; }
+        .modal-content { background: #0b0f19; border: 2px solid #f1c40f; border-radius: 24px; padding: 20px; width: 100%; max-width: 420px; text-align: center; position: relative; box-shadow: 0 0 25px rgba(241, 196, 15, 0.3); }
+        .close-btn { position: absolute; top: 12px; right: 16px; font-size: 28px; cursor: pointer; color: var(--gray-text); }
+        
+        /* ऑल-इन-वन पोस्टर डिज़ाइन */
+        .phonepe-poster { 
+            background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%); 
+            border-radius: 20px; 
+            padding: 16px 12px; 
+            margin: 12px 0; 
+            color: #000; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 2px solid #e2e8f0;
+        }
+        
+        .upi-apps-bar { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; width: 100%; }
+        .upi-app-badge { background: #ffffff; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 8px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .qr-wrapper { width: 200px; height: 200px; border: 2px solid #cbd5e1; border-radius: 16px; padding: 10px; background: #fff; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 10px rgba(0,0,0,0.05); }
+        .merchant-name-display { font-size: 15px; font-weight: 900; color: #0f172a; margin-top: 10px; background: #e2e8f0; padding: 6px 14px; border-radius: 20px; border: 1px solid #cbd5e1; }
+        .upi-footer-text { font-size: 10px; color: #64748b; margin-top: 6px; font-weight: bold; }
+        
+        .banner-share { background: linear-gradient(135deg, #1e1b4b, #311b92); border: 1px solid var(--accent-yellow); padding: 12px; border-radius: 14px; margin-bottom: 15px; font-size: 12px; line-height: 1.5; color: #e2e8f0; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <div class="header-bar">
+        <a href="index.html" class="back-btn">⬅ मुख्य पृष्ठ</a>
+        <h3 style="font-size: 15px; color: var(--accent-yellow);">💳 पैसे जोड़ें (Deposit)</h3>
+        <div></div>
+    </div>
+
+    <div class="wallet-card">
+        <div style="font-size:12px; opacity: 0.9;">वर्तमान वॉलेट बैलेंस</div>
+        <div class="wallet-amount">₹<span id="displayBalance">0.00</span></div>
+    </div>
+
+    <!-- शेयर और कमाएँ बैनर -->
+    <div class="banner-share">
+        🚀 <b>लिंक शेयर करें और ₹400 का गिफ्ट कोड पाएँ!</b><br>
+        ₹300 का लिंक शेयर करने पर ₹400 का गिफ्ट कोड प्राप्त कर सकते हैं। आप जितना जोड़ेंगे उतना ही कमीशन आपके अकाउंट में जोड़ दिया जाएगा!
+    </div>
+
+    <!-- 🎁 गिफ्ट कोड कार्ड (रिडीम और प्राप्त कोड डिस्प्ले) -->
+    <div class="giftbox-card">
+        
+        <!-- यदि पहली बार रिचार्ज पर गिफ्ट कोड प्राप्त हुआ है तो यहाँ दिखेगा -->
+        <div id="generatedGiftSection" class="generated-gift-display">
+            <div style="font-size:12px; color:#a7f3d0; font-weight:bold;">🎉 आपका प्राप्त गिफ्ट कोड (अन्य ID के लिए):</div>
+            <div id="displayGeneratedCode" class="gift-code-badge">-------</div>
+            <div style="font-size:11px; color:#cbd5e1;">मूल्य: <b id="displayGeneratedAmount" style="color:var(--accent-yellow);">₹0</b> (इसे किसी अन्य आईडी में इस्तेमाल करें)</div>
+            <div id="giftExpiryTimer" class="gift-timer">⏳ वैध समय शेष: 05h 00m 00s</div>
+        </div>
+
+        <div style="font-size:13px; font-weight:bold; color:var(--accent-yellow);">🎁 गिफ्ट कोड (Gift Code) डालें</div>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+            <input type="text" id="giftCodeInput" class="input-style" placeholder="यहाँ गिफ्ट कोड लिखें" style="margin:0;">
+            <button onclick="claimGiftCode()" class="action-btn" style="width:70px; margin:0; background:var(--accent-yellow);">OK</button>
+        </div>
+    </div>
+
+    <!-- फर्स्ट-टाइम रिचार्ज ऑफ़र (केवल पहले रिचार्ज पर दिखेगा) -->
+    <div id="firstTimeSection" style="display:none;">
+        <div class="section-title">🌟 फर्स्ट टाइम स्पेशल डिपॉजिट ऑफ़र:</div>
+        <div class="offer-card" onclick="openPaymentModal(100, 25, true, 100)">
+            <div>
+                <div class="offer-pay">₹100 जोड़ें</div>
+                <div class="offer-get">वॉलेट में मिलेंगे: ₹125 (+₹100 मुफ़्त गिफ्ट कोड)</div>
+            </div>
+            <span class="badge">1st TIME ONLY</span>
+        </div>
+    </div>
+
+    <!-- परमानेंट डिपॉजिट ऑफ़र -->
+    <div class="section-title">🔥 नियमित डिपॉजिट ऑफ़र:</div>
+
+    <div class="offer-card" onclick="openPaymentModal(300, 100, false, 400)">
+        <div>
+            <div class="offer-pay">₹300 पे करें</div>
+            <div class="offer-get">वॉलेट में मिलेंगे: ₹400 (+₹400 मुफ़्त गिफ्ट कोड)</div>
+        </div>
+        <span class="badge">धमाका ऑफ़र</span>
+    </div>
+
+    <div class="offer-card" onclick="openPaymentModal(500, 100, false, 0)">
+        <div>
+            <div class="offer-pay">₹500 जोड़ें</div>
+            <div class="offer-get">वॉलेट में मिलेंगे: ₹600 (₹100 बोनस)</div>
+        </div>
+        <span class="badge">पॉपुलर</span>
+    </div>
+
+    <div class="offer-card" onclick="openPaymentModal(1000, 800, false, 0)">
+        <div>
+            <div class="offer-pay">₹1000 जोड़ें</div>
+            <div class="offer-get">वॉलेट में मिलेंगे: ₹1800 (₹800 भारी बोनस)</div>
+        </div>
+        <span class="badge">वीआईपी</span>
+    </div>
+
+    <div class="offer-card" onclick="openPaymentModal(5000, 5000, false, 0)">
+        <div>
+            <div class="offer-pay">₹5000 जोड़ें</div>
+            <div class="offer-get">वॉलेट में मिलेंगे: ₹10000 (100% डबल बोनस)</div>
+        </div>
+        <span class="badge">सुपर वीआईपी</span>
+    </div>
+
+    <!-- ⚡ मनमानी रकम भरे -->
+    <div class="section-title">✨ अपनी पसंद की रकम जोड़ें (Custom Amount):</div>
+    <div class="custom-amount-card">
+        <div style="font-size:13px; font-weight:bold; color:var(--neon-green);">💰 जितना चाहें उतना अमाउंट दर्ज करें</div>
+        <p style="font-size:11px; color:var(--gray-text); margin-top:3px;">हर डिपॉजिट पर पाएँ सीधा <b>10% एक्स्ट्रा बोनस!</b></p>
+        <input type="number" id="customAmountInput" class="input-style" placeholder="रकम दर्ज करें (उदा. 250, 750, 2000)" style="margin-top:10px;">
+        <button class="action-btn" onclick="submitCustomAmount()" style="background:linear-gradient(90deg, #f1c40f, #e11d48); color:#fff;">QR कोड पाएँ (10% बोनस के साथ)</button>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div id="paymentModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal()">&times;</span>
+        
+        <div id="step1-payment">
+            <h3 style="color:var(--accent-yellow); font-size: 18px; margin-bottom:5px;">QR स्कैन करके भुगतान करें</h3>
+            <p style="font-size: 11px; color: var(--gray-text); margin-bottom: 8px;">किसी भी UPI ऐप से स्कैन करें</p>
+            
+            <div class="phonepe-poster">
+                <div class="upi-apps-bar">
+                    <div class="upi-app-badge" style="color:#5f259f;">🟣 PhonePe</div>
+                    <div class="upi-app-badge" style="color:#00baf2;">🔵 Paytm</div>
+                    <div class="upi-app-badge" style="color:#4285f4;">🔴 GPay</div>
+                    <div class="upi-app-badge" style="color:#00509d;">🌐 BHIM</div>
+                    <div class="upi-app-badge" style="color:#ff9900;">🟠 Amazon</div>
+                    <div class="upi-app-badge" style="color:#e21782;">💖 MobiKwik</div>
+                    <div class="upi-app-badge" style="color:#25d366;">🟢 WhatsApp</div>
+                </div>
+
+                <div class="qr-wrapper" id="qrcode"></div>
+                <div class="merchant-name-display">Double Dhamaka India Bumper Offer</div>
+                <div class="upi-footer-text">ACCEPTED HERE • ALL UPI APPS</div>
+            </div>
+
+            <p style="font-size:12px; color:var(--gray-text); margin-bottom:5px;">पेमेंट करने के बाद 12 अंकों का UTR / Transaction ID डालें:</p>
+            <input type="text" id="utrInput" class="input-style" placeholder="12 अंकों का UTR नंबर" maxlength="12">
+            <button class="action-btn" onclick="proceedToConfirmUTR()">आगे बढ़ें</button>
+        </div>
+
+        <!-- UTR Confirmation Step -->
+        <div id="step2-confirm" style="display:none;">
+            <h3 style="color:var(--accent-yellow); margin-bottom:10px;">UTR नंबर की पुष्टि करें</h3>
+            <p style="font-size:13px; color:var(--gray-text); margin-bottom:12px;">कृपया दर्ज किया गया UTR दोबारा जाँचें:</p>
+            <div id="confirmUtrDisplay" style="font-size:20px; font-weight:800; color:var(--neon-green); margin-bottom:15px; letter-spacing:2px;"></div>
+            
+            <button class="action-btn" onclick="submitDepositFinal()">हाँ, सही है (सबमिट करें)</button>
+            <button class="action-btn" onclick="backToStep1()" style="background:#475569; color:#fff; margin-top:6px;">बदलाव करें</button>
+        </div>
+
+        <!-- 5-Minute Timer / Verifying Screen -->
+        <div id="step3-timer" style="display:none;">
+            <h3 style="color:var(--accent-yellow); margin-bottom:10px;">पेमेंट का सत्यापन हो रहा है</h3>
+            <p style="font-size:12px; color:var(--gray-text); margin-top:8px;">कृपया प्रतीक्षा करें, आपका बैलेंस और बोनस प्रोसेस हो रहा है...</p>
+            <div id="timerDisplay" style="font-size:32px; font-weight:800; color:var(--primary-red); margin:15px 0;">05:00</div>
+            <p style="font-size:11px; color:var(--gray-text);">पेज को बंद न करें!</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDUMcJly0ar9hjS8mmkZKizF9fZgwvTz_E",
+      authDomain: "double-bang-game.firebaseapp.com",
+      databaseURL: "https://double-bang-game-default-rtdb.firebaseio.com",
+      projectId: "double-bang-game",
+      storageBucket: "double-bang-game.firebasestorage.app",
+      messagingSenderId: "1022652972426",
+      appId: "1:1022652972426:web:ff7ba6bb61f5a7a78a1c73",
+      measurementId: "G-QKXH27RQQS"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+
+    let currentUser = localStorage.getItem('game_current_user') || '7084520775';
+    let selectedAmount = 0;
+    let selectedBonus = 0;
+    let isFirstTimeOffer = false;
+    let giftCodeValueToGen = 0;
+    let isUserFirstDeposit = false;
+    let timerInterval = null;
+    let giftCountdownInterval = null;
+
+    function initPage() {
+        if (!currentUser) {
+            alert("कृपया मुख्य पृष्ठ से अपनी आईडी खोलें!");
+            window.location.href = "index.html";
+            return;
+        }
+
+        // यूज़र डेटा और बैलेंस लोड करें
+        db.ref('users/' + currentUser).on('value', snapshot => {
+            let user = snapshot.val() || {};
+            document.getElementById('displayBalance').innerText = parseFloat(user.balance || 0).toFixed(2);
+            
+            if (!user.firstDepositDone) {
+                isUserFirstDeposit = true;
+                document.getElementById('firstTimeSection').style.display = 'block';
+            } else {
+                isUserFirstDeposit = false;
+                document.getElementById('firstTimeSection').style.display = 'none';
+            }
+        });
+
+        // यूज़र द्वारा प्राप्त हुआ गिफ्ट कोड चेक करें
+        checkActiveGiftCode();
+    }
+
+    // 5 घंटे के लिए गिफ्ट कोड डिस्प्ले और उल्टी-गिनती टाइमर चेक करने का फंक्शन
+    function checkActiveGiftCode() {
+        db.ref('users/' + currentUser + '/activeGiftCode').on('value', snapshot => {
+            let giftInfo = snapshot.val();
+            let giftSection = document.getElementById('generatedGiftSection');
+
+            if (!giftInfo) {
+                giftSection.style.display = 'none';
+                if (giftCountdownInterval) clearInterval(giftCountdownInterval);
+                return;
+            }
+
+            let now = Date.now();
+            if (now >= giftInfo.expiresAt) {
+                // 5 घंटे पूरे हो गए तो कोड ऑटो हटा दें
+                db.ref('users/' + currentUser + '/activeGiftCode').remove();
+                giftSection.style.display = 'none';
+                if (giftCountdownInterval) clearInterval(giftCountdownInterval);
+            } else {
+                // कोड एक्टिव है - प्रदर्शित करें
+                giftSection.style.display = 'block';
+                document.getElementById('displayGeneratedCode').innerText = giftInfo.code;
+                document.getElementById('displayGeneratedAmount').innerText = '₹' + giftInfo.amount;
+
+                // उल्टी गिनती शुरू करें
+                if (giftCountdownInterval) clearInterval(giftCountdownInterval);
+                giftCountdownInterval = setInterval(() => {
+                    let currentNow = Date.now();
+                    let timeLeft = giftInfo.expiresAt - currentNow;
+
+                    if (timeLeft <= 0) {
+                        clearInterval(giftCountdownInterval);
+                        db.ref('users/' + currentUser + '/activeGiftCode').remove();
+                        giftSection.style.display = 'none';
+                    } else {
+                        let hours = Math.floor(timeLeft / (1000 * 60 * 60));
+                        let minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                        let seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+                        hours = hours < 10 ? "0" + hours : hours;
+                        minutes = minutes < 10 ? "0" + minutes : minutes;
+                        seconds = seconds < 10 ? "0" + seconds : seconds;
+
+                        document.getElementById('giftExpiryTimer').innerText = `⏳ वैध समय शेष: ${hours}h ${minutes}m ${seconds}s`;
+                    }
+                }, 1000);
+            }
+        });
+    }
+
+    function submitCustomAmount() {
+        let amtInput = document.getElementById('customAmountInput').value.trim();
+        let amt = parseFloat(amtInput);
+
+        if (!amt || amt <= 0) {
+            alert("कृपया सही रकम दर्ज करें!");
+            return;
+        }
+
+        let bonus = Math.round(amt * 0.10);
+        openPaymentModal(amt, bonus, false, 0);
+    }
+
+    function openPaymentModal(amount, bonus = 0, isFirst = false, giftVal = 0) {
+        selectedAmount = amount;
+        selectedBonus = bonus;
+        isFirstTimeOffer = isFirst;
+        giftCodeValueToGen = giftVal;
+
+        if (isFirst && !isUserFirstDeposit) {
+            alert("यह ऑफ़र केवल पहली बार रिचार्ज करने वालों के लिए है!");
+            return;
+        }
+
+        document.getElementById('qrcode').innerHTML = "";
+        
+        let upiUri = `upi://pay?pa=7084520775-4@ybl&pn=Double%20Dhamaka%20India%20Bumper%20Offer&am=${amount}&cu=INR`;
+        
+        new QRCode(document.getElementById("qrcode"), {
+            text: upiUri,
+            width: 180,
+            height: 180
+        });
+
+        document.getElementById('utrInput').value = "";
+        backToStep1();
+        document.getElementById('paymentModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        if(timerInterval) clearInterval(timerInterval);
+        document.getElementById('paymentModal').style.display = 'none';
+    }
+
+    function proceedToConfirmUTR() {
+        let utr = document.getElementById('utrInput').value.trim();
+        if (utr.length !== 12 || isNaN(utr)) {
+            alert("❌ UTR नंबर केवल और केवल 12 अंकों का होना चाहिए!");
+            return;
+        }
+        document.getElementById('confirmUtrDisplay').innerText = utr;
+        document.getElementById('step1-payment').style.display = 'none';
+        document.getElementById('step2-confirm').style.display = 'block';
+    }
+
+    function backToStep1() {
+        document.getElementById('step1-payment').style.display = 'block';
+        document.getElementById('step2-confirm').style.display = 'none';
+        document.getElementById('step3-timer').style.display = 'none';
+    }
+
+    function submitDepositFinal() {
+        let utr = document.getElementById('utrInput').value.trim();
+
+        document.getElementById('step2-confirm').style.display = 'none';
+        document.getElementById('step3-timer').style.display = 'block';
+
+        let duration = 300; // 5 मिनट सत्यापन
+        let timerDisplay = document.getElementById('timerDisplay');
+
+        timerInterval = setInterval(() => {
+            let minutes = Math.floor(duration / 60);
+            let seconds = duration % 60;
+            minutes = minutes < 10 ? "0" + minutes : minutes;
+            seconds = seconds < 10 ? "0" + seconds : seconds;
+            timerDisplay.innerText = `${minutes}:${seconds}`;
+
+            if (--duration < 0) {
+                clearInterval(timerInterval);
+                processSuccessTransaction(utr);
+            }
+        }, 1000);
+    }
+
+    function processSuccessTransaction(utr) {
+        let totalCredit = selectedAmount + selectedBonus;
+
+        let userRef = db.ref('users/' + currentUser);
+        userRef.once('value').then(snapshot => {
+            let user = snapshot.val() || { balance: 0, history: [] };
+            let updatedBalance = (user.balance || 0) + totalCredit;
+            let historyArr = user.history || [];
+
+            historyArr.push({
+                type: 'डिपॉजिट (बोनस सहित)',
+                amount: totalCredit,
+                utr: utr,
+                date: new Date().toLocaleDateString('hi-IN'),
+                status: 'सफल'
+            });
+
+            let updateObj = {
+                balance: updatedBalance,
+                history: historyArr,
+                firstDepositDone: true
+            };
+
+            userRef.update(updateObj).then(() => {
+                let msg = `✅ भुगतान सफलतापूर्वक प्राप्त हुआ!\n₹${selectedAmount} + ₹${selectedBonus} (बोनस) = ₹${totalCredit} वॉलेट में जोड़ दिए गए हैं।`;
+
+                // गिफ्ट कोड जनरेट करने का नया लॉजिक (₹100 या ₹300 वाले ऑफ़र पर)
+                if (isFirstTimeOffer || giftCodeValueToGen > 0) {
+                    let giftAmount = isFirstTimeOffer ? 100 : giftCodeValueToGen;
+                    let generatedCode = "GIFT" + Math.floor(100000 + Math.random() * 900000);
+                    let expiryTime = Date.now() + (5 * 60 * 60 * 1000); // 5 घंटे की मियाद
+
+                    // 1. ग्लोबल `giftCodes` डेटाबेस में सुरक्षित करें
+                    db.ref('giftCodes/' + generatedCode).set({
+                        amount: giftAmount,
+                        expiresAt: expiryTime,
+                        isClaimed: false,
+                        createdBy: currentUser // किस यूज़र की आईडी पर बना है
+                    });
+
+                    // 2. यूज़र की आईडी पर एक्टिव गिफ्ट कोड सेव करें ताकि कार्ड में दिखे
+                    db.ref('users/' + currentUser + '/activeGiftCode').set({
+                        code: generatedCode,
+                        amount: giftAmount,
+                        expiresAt: expiryTime
+                    });
+
+                    msg += `\n\n🎁 बधाई हो! आपका ₹${giftAmount} का गिफ्ट कोड जनरेट हो चुका है और ऊपर गिफ्ट बॉक्स में 5 घंटे के लिए दिखने लगा है!`;
+                }
+
+                alert(msg);
+                closeModal();
+            });
+        });
+    }
+
+    // 🎁 गिफ्ट कोड रिडीम करने का फंक्शन (सख्त सुरक्षा जाँच के साथ)
+    function claimGiftCode() {
+        let code = document.getElementById('giftCodeInput').value.trim();
+        if (!code) {
+            alert("कृपया सही गिफ्ट कोड लिखें!");
+            return;
+        }
+
+        let codeRef = db.ref('giftCodes/' + code);
+        codeRef.once('value').then(snapshot => {
+            let giftData = snapshot.val();
+            if (!giftData) {
+                alert("❌ अमान्य या गलत गिफ्ट कोड!");
+                return;
+            }
+
+            // 🚫 नियम 1: अपनी ही आईडी पर बना गिफ्ट कोड खुद रिडीम नहीं किया जा सकता
+            if (giftData.createdBy === currentUser) {
+                alert("⚠️ आप अपनी ही आईडी से जनरेट हुआ गिफ्ट कोड खुद इस्तेमाल नहीं कर सकते!\nइसे किसी अन्य यूज़र आईडी पर शेयर करके इस्तेमाल करवाएँ।");
+                return;
+            }
+
+            // 🚫 नियम 2: अगर कोड पहले ही क्लेम हो चुका है
+            if (giftData.isClaimed) {
+                alert("⚠️ यह गिफ्ट कोड पहले ही किसी अन्य आईडी पर इस्तेमाल किया जा चुका है!");
+                return;
+            }
+
+            // 🚫 नियम 3: 5 घंटे का समय समाप्त (Expired)
+            if (Date.now() > giftData.expiresAt) {
+                alert("⏳ यह गिफ्ट कोड एक्सपायर (5 घंटे का समय समाप्त) हो चुका है!");
+                return;
+            }
+
+            let giftAmount = giftData.amount;
+            let userRef = db.ref('users/' + currentUser);
+
+            userRef.once('value').then(userSnap => {
+                let user = userSnap.val() || { balance: 0 };
+                let newBal = (user.balance || 0) + giftAmount;
+
+                // वॉलेट में राशि जोड़ें और कोड का स्टेटस बंद (Claimed) करें
+                userRef.update({ balance: newBal });
+                codeRef.update({ 
+                    isClaimed: true,
+                    claimedBy: currentUser,
+                    claimedAt: Date.now()
+                });
+
+                alert(`🎉 बधाई हो! ₹${giftAmount} का गिफ्ट कोड आपके वॉलेट में सफलतापूर्वक ऐड कर दिया गया है।`);
+                document.getElementById('giftCodeInput').value = "";
+            });
+        });
+    }
+
+    window.onload = initPage;
+</script>
+</body>
+</html>

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game 4 - Stock Market Exchange</title>
+
+    <!-- Firebase SDK (v8 Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #04060d;
+            --card-dark: #0b1120;
+            --accent-gold: #fbbf24;
+            --neon-green: #10b981;
+            --danger-red: #f43f5e;
+            --gray-text: #94a3b8;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
+        body { background-color: var(--bg-dark); color: #f8fafc; padding: 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        
+        .main-container { width: 100%; max-width: 480px; }
+
+        .wallet-card { background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid rgba(251, 191, 36, 0.3); padding: 12px; border-radius: 14px; margin-bottom: 12px; text-align: center; }
+        .wallet-title { font-size: 11px; color: var(--gray-text); text-transform: uppercase; letter-spacing: 0.5px; }
+        .wallet-amount { font-size: 26px; font-weight: 800; color: var(--accent-gold); margin-top: 4px; }
+
+        .stock-ticker-bar { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 8px; padding-bottom: 4px; }
+        .stock-chip { flex: 1; min-width: 90px; background: var(--card-dark); border: 1px solid rgba(255,255,255,0.1); padding: 8px; border-radius: 10px; text-align: center; cursor: pointer; }
+        .stock-chip.active { border-color: var(--accent-gold); background: rgba(251, 191, 36, 0.1); }
+        .stock-name { font-size: 11px; font-weight: bold; color: var(--gray-text); }
+        .stock-price { font-size: 12px; font-weight: 800; }
+
+        .chart-card { position: relative; width: 100%; height: 200px; background: #030712; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 8px; padding: 8px; }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        .trade-controls { background: var(--card-dark); border-radius: 14px; padding: 12px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 8px; }
+        .trade-inputs { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+        .qty-box { flex: 1; background: #0f172a; border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; padding: 8px; color: #fff; font-weight: bold; outline: none; }
+        .btn-buy { width: 100%; background: linear-gradient(135deg, #10b981, #047857); color: #fff; font-weight: bold; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+
+        .portfolio-card { background: var(--card-dark); border-radius: 14px; padding: 12px; border: 1px solid rgba(255,255,255,0.08); }
+        .portfolio-title { font-size: 12px; color: var(--accent-gold); font-weight: bold; margin-bottom: 8px; display: flex; justify-content: space-between; }
+        .portfolio-table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }
+        .portfolio-table th { color: var(--gray-text); padding: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .portfolio-table td { padding: 6px 2px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .btn-settle { background: linear-gradient(135deg, #ef4444, #991b1b); color: #fff; border: none; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer; }
+
+        .toast-msg { position: fixed; top: 35%; left: 50%; transform: translate(-50%, -50%); background: rgba(5, 8, 17, 0.95); color: #fff; padding: 12px 24px; border-radius: 12px; font-size: 12px; font-weight: bold; z-index: 9999; display: none; text-align: center; border: 1px solid var(--accent-gold); }
+    </style>
+</head>
+<body>
+
+<div id="toast-box" class="toast-msg"></div>
+
+<div class="main-container">
+    <!-- Main Wallet Card Connected Directly to Firebase -->
+    <div class="wallet-card">
+        <div class="wallet-title">कैसीनो वॉलेट बैलेंस</div>
+        <div class="wallet-amount">₹<span id="user-balance">0.00</span></div>
+    </div>
+
+    <!-- Stock Selection Chips -->
+    <div class="stock-ticker-bar">
+        <div class="stock-chip active" id="chip-GAU" onclick="selectStock('GAU')">
+            <div class="stock-name">GauCorp</div>
+            <div class="stock-price" id="price-GAU" style="color:var(--neon-green)">₹150.00</div>
+        </div>
+        <div class="stock-chip" id="chip-PASHU" onclick="selectStock('PASHU')">
+            <div class="stock-name">PashuAgro</div>
+            <div class="stock-price" id="price-PASHU" style="color:var(--neon-green)">₹280.00</div>
+        </div>
+        <div class="stock-chip" id="chip-DAIRY" onclick="selectStock('DAIRY')">
+            <div class="stock-name">VIP Dairy</div>
+            <div class="stock-price" id="price-DAIRY" style="color:var(--neon-green)">₹95.00</div>
+        </div>
+        <div class="stock-chip" id="chip-TECH" onclick="selectStock('TECH')">
+            <div class="stock-name">TechGau</div>
+            <div class="stock-price" id="price-TECH" style="color:var(--neon-green)">₹420.00</div>
+        </div>
+    </div>
+
+    <!-- Live Chart Card -->
+    <div class="chart-card">
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <span style="font-size:11px; font-weight:bold; color:var(--accent-gold);" id="selected-stock-title">GauCorp Live Chart</span>
+            <span style="font-size:11px; font-weight:bold;" id="live-stock-val">₹150.00</span>
+        </div>
+        <canvas id="stockChart"></canvas>
+    </div>
+
+    <!-- Trade Controls -->
+    <div class="trade-controls">
+        <div style="font-size:11px; color:var(--gray-text); margin-bottom:6px;">मात्रा (Shares Qty) दर्ज करें:</div>
+        <div class="trade-inputs">
+            <input type="number" id="trade-qty" class="qty-box" value="10" min="1" oninput="updateTotalCost()">
+            <div style="font-size:11px; font-weight:bold; width:120px; text-align:right;">
+                कुल: <span id="total-cost" style="color:var(--accent-gold);">₹1,500.00</span>
+            </div>
+        </div>
+        <button class="btn-buy" onclick="buyStock()">📈 BUY STOCKS (खरीदें)</button>
+    </div>
+
+    <!-- Holdings / Portfolio Section -->
+    <div class="portfolio-card">
+        <div class="portfolio-title">
+            <span>💼 मेरी होल्डिंग्स (Portfolio)</span>
+            <span style="color:var(--gray-text);">लाइव Settlement</span>
+        </div>
+        <table class="portfolio-table">
+            <thead>
+                <tr>
+                    <th>स्टॉक</th>
+                    <th>शेयर</th>
+                    <th>खरीद भाव</th>
+                    <th>करंट P&L</th>
+                    <th>एक्शन</th>
+                </tr>
+            </thead>
+            <tbody id="portfolio-tbody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Firebase Configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyDUMcJly0ar9hjS8mmkZKizF9fZgwvTz_E",
+        authDomain: "double-bang-game.firebaseapp.com",
+        databaseURL: "https://double-bang-game-default-rtdb.firebaseio.com",
+        projectId: "double-bang-game",
+        storageBucket: "double-bang-game.firebasestorage.app",
+        messagingSenderId: "1022652972426",
+        appId: "1:1022652972426:web:ff7ba6bb61f5a7a78a1c73",
+        measurementId: "G-QKXH27RQQS"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+
+    // Live User Phone Connected with Main Wallet
+    let currentUser = '7084520775'; 
+    let currentBalance = 0.00;
+    let myHoldings = [];
+
+    let walletRef = db.ref('users/' + currentUser + '/balance');
+    let holdingsRef = db.ref('users/' + currentUser + '/stockHoldings');
+
+    let stocks = {
+        'GAU': { name: 'GauCorp', price: 150.00, history: [148, 149, 150] },
+        'PASHU': { name: 'PashuAgro', price: 280.00, history: [275, 278, 280] },
+        'DAIRY': { name: 'VIP Dairy', price: 95.00, history: [92, 94, 95] },
+        'TECH': { name: 'TechGau', price: 420.00, history: [415, 418, 420] }
+    };
+
+    let activeStockKey = 'GAU';
+    let canvas, ctx;
+    let timeSecondsCounter = 0;
+    let is1SecSpikeActive = false;
+
+    function showToast(msg) {
+        let t = document.getElementById('toast-box');
+        t.innerText = msg;
+        t.style.display = 'block';
+        setTimeout(() => { t.style.display = 'none'; }, 1500);
+    }
+
+    function initUserConnection() {
+        // Main Wallet Realtime Listener
+        walletRef.on('value', (snapshot) => {
+            let val = snapshot.val();
+            currentBalance = parseFloat(val !== null ? val : 0);
+            document.getElementById('user-balance').innerText = currentBalance.toFixed(2);
+        });
+
+        // Stock Holdings Realtime Listener
+        holdingsRef.on('value', (snapshot) => {
+            myHoldings = snapshot.val() || [];
+            renderPortfolio();
+        });
+    }
+
+    function selectStock(key) {
+        activeStockKey = key;
+        document.querySelectorAll('.stock-chip').forEach(c => c.classList.remove('active'));
+        document.getElementById(`chip-${key}`).classList.add('active');
+        document.getElementById('selected-stock-title').innerText = stocks[key].name + " Live Chart";
+        updateTotalCost();
+        drawChart();
+    }
+
+    function updateTotalCost() {
+        let qty = parseInt(document.getElementById('trade-qty').value) || 0;
+        let cost = qty * stocks[activeStockKey].price;
+        document.getElementById('total-cost').innerText = `₹${cost.toFixed(2)}`;
+    }
+
+    // Buy Stock using Atomic Transaction on Main Wallet
+    function buyStock() {
+        let qty = parseInt(document.getElementById('trade-qty').value);
+        if(!qty || qty <= 0) return showToast('⚠️ मान्य शेयर संख्या दर्ज करें!');
+
+        let cost = qty * stocks[activeStockKey].price;
+
+        walletRef.transaction((currentBal) => {
+            currentBal = parseFloat(currentBal || 0);
+            if (currentBal >= cost) {
+                return currentBal - cost;
+            } else {
+                return; // Abort Transaction
+            }
+        }, (error, committed) => {
+            if (error) {
+                showToast("⚠️ नेटवर्क एरर!");
+            } else if (!committed) {
+                showToast("❌ वॉलेट में बैलेंस अपर्याप्त है!");
+            } else {
+                let newHolding = {
+                    id: Date.now(),
+                    symbol: activeStockKey,
+                    name: stocks[activeStockKey].name,
+                    qty: qty,
+                    buyPrice: stocks[activeStockKey].price
+                };
+
+                myHoldings.push(newHolding);
+                holdingsRef.set(myHoldings);
+                showToast(`✅ ${qty} शेयर्स खरीदे गए!`);
+            }
+        });
+    }
+
+    // Sell Stock and Credit Proceeds directly to Main Wallet
+    function settlePosition(holdingId) {
+        let index = myHoldings.findIndex(h => h.id === holdingId);
+        if(index === -1) return;
+
+        let item = myHoldings[index];
+        let currentPrice = stocks[item.symbol].price;
+        let returnAmount = item.qty * currentPrice;
+        let profitLoss = returnAmount - (item.qty * item.buyPrice);
+
+        walletRef.transaction((currentBal) => {
+            return parseFloat(currentBal || 0) + returnAmount;
+        }, (error, committed) => {
+            if (committed) {
+                myHoldings.splice(index, 1);
+                holdingsRef.set(myHoldings);
+
+                if(profitLoss >= 0) {
+                    showToast(`🎉 Settled! +₹${returnAmount.toFixed(2)} (लाभ: ₹${profitLoss.toFixed(2)})`);
+                } else {
+                    showToast(`📉 Settled! +₹${returnAmount.toFixed(2)} (हानि: ₹${Math.abs(profitLoss).toFixed(2)})`);
+                }
+            }
+        });
+    }
+
+    function renderPortfolio() {
+        let html = "";
+        let holdings = myHoldings || [];
+
+        holdings.forEach(item => {
+            let currentPrice = stocks[item.symbol].price;
+            let currentVal = item.qty * currentPrice;
+            let buyVal = item.qty * item.buyPrice;
+            let pnl = currentVal - buyVal;
+            let pnlClass = pnl >= 0 ? 'color:#10b981;' : 'color:#ef4444;';
+
+            html += `<tr>
+                <td><b>${item.name}</b></td>
+                <td>${item.qty}</td>
+                <td>₹${item.buyPrice.toFixed(2)}</td>
+                <td style="${pnlClass} font-weight:bold;">₹${pnl.toFixed(2)}</td>
+                <td><button class="btn-settle" onclick="settlePosition(${item.id})">SELL</button></td>
+            </tr>`;
+        });
+
+        document.getElementById('portfolio-tbody').innerHTML = html || `<tr><td colspan="5" style="color:var(--gray-text); padding:12px;">कोई स्टॉक होल्डिंग मौजूद नहीं है।</td></tr>`;
+    }
+
+    function startStockEngine() {
+        setInterval(() => {
+            timeSecondsCounter += 1;
+            if (timeSecondsCounter >= 600) {
+                trigger1SecMegaSpike();
+                timeSecondsCounter = 0;
+            }
+        }, 1000);
+
+        setInterval(() => {
+            if (is1SecSpikeActive) return;
+
+            Object.keys(stocks).forEach(key => {
+                let changePercent = (Math.random() * 0.03) - 0.022; 
+                let newPrice = stocks[key].price * (1 + changePercent);
+                if(newPrice < 10) newPrice = 10;
+                
+                stocks[key].price = parseFloat(newPrice.toFixed(2));
+                stocks[key].history.push(stocks[key].price);
+                if(stocks[key].history.length > 20) stocks[key].history.shift();
+
+                let priceEl = document.getElementById(`price-${key}`);
+                if(priceEl) {
+                    priceEl.innerText = `₹${stocks[key].price.toFixed(2)}`;
+                    priceEl.style.color = changePercent >= 0 ? 'var(--neon-green)' : 'var(--danger-red)';
+                }
+            });
+
+            document.getElementById('live-stock-val').innerText = `₹${stocks[activeStockKey].price.toFixed(2)}`;
+            updateTotalCost();
+            drawChart();
+            renderPortfolio();
+        }, 1500);
+    }
+
+    function trigger1SecMegaSpike() {
+        is1SecSpikeActive = true;
+
+        Object.keys(stocks).forEach(key => {
+            let spikeAmount = Math.floor(1000000 + Math.random() * 50000000);
+            stocks[key].price = spikeAmount;
+            stocks[key].history.push(spikeAmount);
+
+            let priceEl = document.getElementById(`price-${key}`);
+            if(priceEl) {
+                priceEl.innerText = `₹${spikeAmount.toLocaleString('en-IN')}`;
+                priceEl.style.color = 'var(--neon-green)';
+            }
+        });
+
+        document.getElementById('live-stock-val').innerText = `₹${stocks[activeStockKey].price.toLocaleString('en-IN')}`;
+        drawChart();
+        renderPortfolio();
+
+        setTimeout(() => {
+            Object.keys(stocks).forEach(key => {
+                let crashedPrice = parseFloat((Math.random() * 15 + 5).toFixed(2));
+                stocks[key].price = crashedPrice;
+                stocks[key].history.push(crashedPrice);
+
+                let priceEl = document.getElementById(`price-${key}`);
+                if(priceEl) {
+                    priceEl.innerText = `₹${crashedPrice.toFixed(2)}`;
+                    priceEl.style.color = 'var(--danger-red)';
+                }
+            });
+
+            document.getElementById('live-stock-val').innerText = `₹${stocks[activeStockKey].price.toFixed(2)}`;
+            drawChart();
+            renderPortfolio();
+            
+            is1SecSpikeActive = false;
+        }, 1000);
+    }
+
+    function drawChart() {
+        canvas = document.getElementById('stockChart');
+        if(!canvas) return;
+        ctx = canvas.getContext('2d');
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        let data = stocks[activeStockKey].history;
+        let min = Math.min(...data) * 0.98;
+        let max = Math.max(...data) * 1.02;
+
+        ctx.beginPath();
+        ctx.strokeStyle = data[data.length-1] >= data[0] ? '#10b981' : '#ef4444';
+        ctx.lineWidth = 3;
+
+        let stepX = canvas.width / (data.length - 1);
+        for(let i = 0; i < data.length; i++) {
+            let x = i * stepX;
+            let y = canvas.height - ((data[i] - min) / (max - min)) * canvas.height;
+            if(i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+    }
+
+    window.onload = function() {
+        initUserConnection();
+        startStockEngine();
+    };
+</script>
+</body>
+</html>
