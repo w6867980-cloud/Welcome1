@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>दैनिक बोनस चरखी - डबल धमाका गेम</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        :root { 
+            --bg-dark: #070a12; 
+            --card-dark: #121826; 
+            --primary-red: #e11d48; 
+            --text-light: #f8fafc; 
+            --accent-yellow: #f1c40f; 
+            --neon-green: #10b981;
+            --gray-text: #94a3b8;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-light); padding: 12px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .main-container { width: 100%; max-width: 460px; text-align: center; }
+        .header-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px; }
+        .back-btn { background: #1e293b; color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: bold; text-decoration: none; }
+        
+        /* मुख्य वॉलेट कार्ड */
+        .wallet-card { background: linear-gradient(135deg, #701a75 0%, #4c1d95 50%, #e11d48 100%); padding: 20px; border-radius: 20px; margin-bottom: 18px; text-align: center; border: 1px solid rgba(255,255,255,0.25); }
+        .wallet-amount { font-size: 34px; font-weight: 800; margin-top: 4px; color: #fff; }
+        
+        /* दैनिक बोनस स्पिनर कंटेनर */
+        .spin-container {
+            background: linear-gradient(145deg, #1e1b4b, #0f172a);
+            border: 2px solid var(--accent-yellow);
+            border-radius: 24px;
+            padding: 20px;
+            margin-top: 10px;
+            box-shadow: 0 0 25px rgba(241, 196, 15, 0.2);
+            position: relative;
+        }
+        .spin-title { font-size: 20px; font-weight: 900; color: var(--accent-yellow); margin-bottom: 5px; }
+        .spin-subtitle { font-size: 12px; color: var(--gray-text); margin-bottom: 20px; }
+
+        .wheel-wrapper {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 0 auto 20px auto;
+        }
+
+        /* सूई / पॉइंटर */
+        .wheel-pointer {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 28px solid #e11d48;
+            z-index: 10;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+        }
+
+        canvas {
+            border-radius: 50%;
+            border: 5px solid var(--accent-yellow);
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            transition: transform 5s cubic-bezier(0.15, 0.9, 0.15, 1);
+        }
+
+        .spin-btn {
+            width: 100%;
+            background: linear-gradient(90deg, #f1c40f, #e11d48);
+            color: #fff;
+            border: none;
+            padding: 14px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(225, 29, 72, 0.4);
+        }
+        .spin-btn:disabled {
+            background: #334155;
+            color: #94a3b8;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .timer-text {
+            font-size: 12px;
+            color: #f87171;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <div class="header-bar">
+        <a href="index.html" class="back-btn">⬅ मुख्य पृष्ठ</a>
+        <h3 style="font-size: 15px; color: var(--accent-yellow);">🎁 दैनिक बोनस</h3>
+        <div></div>
+    </div>
+
+    <!-- मुख्य वॉलेट बैलेंस -->
+    <div class="wallet-card">
+        <div style="font-size:12px; opacity: 0.9;">वर्तमान वॉलेट बैलेंस</div>
+        <div class="wallet-amount">₹<span id="displayBalance">0.00</span></div>
+    </div>
+
+    <!-- दैनिक बोनस चरखी सेक्शन -->
+    <div class="spin-container">
+        <div class="spin-title">🎡 दैनिक बोनस चरखी</div>
+        <div class="spin-subtitle">हर 24 घंटे में एक बार घुमाएँ और पक्का बोनस पाएँ!</div>
+
+        <div class="wheel-wrapper">
+            <div class="wheel-pointer"></div>
+            <canvas id="wheelCanvas" width="300" height="300"></canvas>
+        </div>
+
+        <button id="spinButton" class="spin-btn" onclick="spinWheel()">🎡 चरखी घुमाएँ</button>
+        <div id="cooldownTimer" class="timer-text"></div>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDUMcJly0ar9hjS8mmkZKizF9fZgwvTz_E",
+      authDomain: "double-bang-game.firebaseapp.com",
+      databaseURL: "https://double-bang-game-default-rtdb.firebaseio.com",
+      projectId: "double-bang-game",
+      storageBucket: "double-bang-game.firebasestorage.app",
+      messagingSenderId: "1022652972426",
+      appId: "1:1022652972426:web:ff7ba6bb61f5a7a78a1c73",
+      measurementId: "G-QKXH27RQQS"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+
+    let currentUser = localStorage.getItem('game_current_user') || '7084520775';
+    let currentBalance = 0;
+    let lastSpinTime = 0;
+    let isSpinning = false;
+    let currentRotation = 0;
+    let timerInterval = null;
+
+    // चरखी के सभी 15 ऑप्शन
+    const slices = [
+        { label: "📱 iPhone", amount: 0 },
+        { label: "₹10", amount: 10 },        // Index 1 (जीतने वाला)
+        { label: "🎧 Headphone", amount: 0 },
+        { label: "₹5000", amount: 0 },
+        { label: "🔌 Charger", amount: 0 },
+        { label: "₹15", amount: 15 },        // Index 5 (जीतने वाला)
+        { label: "🏍️ Bike", amount: 0 },
+        { label: "₹20", amount: 20 },        // Index 7 (जीतने वाला)
+        { label: "🎧 VIP Buds", amount: 0 },
+        { label: "₹3000", amount: 0 },
+        { label: "🚙 Jeep", amount: 0 },
+        { label: "📱 Phone", amount: 0 },
+        { label: "₹50", amount: 0 },
+        { label: "₹80", amount: 0 },
+        { label: "₹500", amount: 0 }
+    ];
+
+    const colors = [
+        "#e11d48", "#1e1b4b", "#059669", "#d97706", "#7c3aed", 
+        "#0284c7", "#b91c1c", "#4c1d95", "#047857", "#c2410c",
+        "#6d28d9", "#0369a1", "#9f1239", "#312e81", "#15803d"
+    ];
+
+    function drawWheel() {
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const numSlices = slices.length;
+        const sliceAngle = (2 * Math.PI) / numSlices;
+        const radius = canvas.width / 2;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        slices.forEach((slice, i) => {
+            const angle = i * sliceAngle;
+            ctx.beginPath();
+            ctx.fillStyle = colors[i % colors.length];
+            ctx.moveTo(radius, radius);
+            ctx.arc(radius, radius, radius, angle, angle + sliceAngle);
+            ctx.lineTo(radius, radius);
+            ctx.fill();
+
+            // पाठ / इनाम नाम लिखें
+            ctx.save();
+            ctx.translate(radius, radius);
+            ctx.rotate(angle + sliceAngle / 2);
+            ctx.textAlign = "right";
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 11px system-ui";
+            ctx.fillText(slice.label, radius - 12, 4);
+            ctx.restore();
+        });
+    }
+
+    function initPage() {
+        drawWheel();
+
+        // यूजर का बैलेंस और पिछला स्पिन टाइम लोड करें
+        db.ref('users/' + currentUser).on('value', snapshot => {
+            let user = snapshot.val() || {};
+            currentBalance = parseFloat(user.balance || 0);
+            lastSpinTime = user.lastSpinTime || 0;
+            document.getElementById('displayBalance').innerText = currentBalance.toFixed(2);
+            checkCooldown();
+        });
+    }
+
+    function checkCooldown() {
+        const now = Date.now();
+        const cooldown = 24 * 60 * 60 * 1000; // 24 घंटे
+        const timeLeft = cooldown - (now - lastSpinTime);
+
+        const btn = document.getElementById('spinButton');
+        const timerDiv = document.getElementById('cooldownTimer');
+
+        if (timeLeft > 0) {
+            btn.disabled = true;
+            btn.innerText = "⏳ आज का बोनस लिया जा चुका है";
+            
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                const currentNow = Date.now();
+                const rem = cooldown - (currentNow - lastSpinTime);
+                if (rem <= 0) {
+                    clearInterval(timerInterval);
+                    btn.disabled = false;
+                    btn.innerText = "🎡 चरखी घुमाएँ";
+                    timerDiv.innerText = "";
+                } else {
+                    const hours = Math.floor(rem / (1000 * 60 * 60));
+                    const minutes = Math.floor((rem % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((rem % (1000 * 60)) / 1000);
+                    timerDiv.innerText = `⏱️ अगला फ्री स्पिन: ${hours}h ${minutes}m ${seconds}s बाद`;
+                }
+            }, 1000);
+        } else {
+            btn.disabled = false;
+            btn.innerText = "🎡 चरखी घुमाएँ";
+            timerDiv.innerText = "";
+        }
+    }
+
+    function spinWheel() {
+        if (isSpinning) return;
+
+        const now = Date.now();
+        const cooldown = 24 * 60 * 60 * 1000;
+        if (now - lastSpinTime < cooldown) {
+            alert("⚠️ आप केवल 24 घंटे में एक ही बार चरखी घुमा सकते हैं!");
+            return;
+        }
+
+        isSpinning = true;
+        document.getElementById('spinButton').disabled = true;
+
+        // 🎯 केवल ₹10 (इंडेक्स 1), ₹15 (इंडेक्स 5), और ₹20 (इंडेक्स 7) ही फिक्स चुने जाएँगे
+        const fixedWinningIndices = [1, 5, 7]; 
+        const targetIndex = fixedWinningIndices[Math.floor(Math.random() * fixedWinningIndices.length)];
+        const targetSlice = slices[targetIndex];
+
+        const numSlices = slices.length;
+        const sliceDegree = 360 / numSlices;
+        
+        // चरखी के घूमने और सटीक कोण (Angle) पर रुकने की गणना
+        const targetDegree = 360 - (targetIndex * sliceDegree + sliceDegree / 2);
+        const totalRotations = 5 * 360; // 5 राउंड पूरा घूमना
+        
+        currentRotation += totalRotations + (targetDegree - (currentRotation % 360));
+
+        const canvas = document.getElementById('wheelCanvas');
+        canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+        // 5 सेकंड का स्पिन एनीमेशन पूरा होने पर रकम वॉलेट में जोड़ें
+        setTimeout(() => {
+            isSpinning = false;
+            const winAmount = targetSlice.amount;
+            const updatedBalance = currentBalance + winAmount;
+            const spinTimestamp = Date.now();
+
+            db.ref('users/' + currentUser).update({
+                balance: updatedBalance,
+                lastSpinTime: spinTimestamp
+            }).then(() => {
+                alert(`🎉 बधाई हो! चरखी ${targetSlice.label} पर रुकी और आपके वॉलेट में ₹${winAmount} सफलतापूर्वक जोड़ दिए गए हैं!`);
+            });
+
+        }, 5000);
+    }
+
+    window.onload = initPage;
+</script>
+</body>
+</html>

@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Win Go - Game 1 Pro</title>
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --card-dark: #171e2e;
+            --primary-red: #e11d48;
+            --accent-yellow: #f1c40f;
+            --neon-green: #10b981;
+            --neon-blue: #06b6d4;
+            --text-light: #f8fafc;
+            --gray-text: #94a3b8;
+            --violet-color: #8b5cf6;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-light); padding: 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; position: relative; }
+        
+        .main-container { width: 100%; max-width: 460px; }
+
+        /* Banner Header Bar */
+        .banner-bar { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 14px 16px; 
+            background: linear-gradient(135deg, #e11d48, #991b1b); 
+            border-radius: 14px; 
+            margin-bottom: 12px; 
+            box-shadow: 0 4px 15px rgba(225, 29, 72, 0.3);
+        }
+        .banner-title { font-size: 16px; font-weight: bold; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .back-home-btn { background: rgba(0,0,0,0.3); color: white; text-decoration: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: bold; border: 1px solid rgba(255,255,255,0.2); }
+
+        /* Time Tabs */
+        .time-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+        .time-tab { flex: 1; padding: 10px 4px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: var(--gray-text); font-size: 11px; font-weight: bold; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .time-tab.active { background: linear-gradient(135deg, #991b1b, #e11d48); color: white; border-color: var(--primary-red); transform: scale(1.02); }
+
+        /* Main Wallet Card */
+        .wallet-card { background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 16px; margin-bottom: 12px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .wallet-amount { font-size: 28px; font-weight: bold; color: var(--accent-yellow); margin-top: 4px; }
+
+        .game-status-card { background: var(--card-dark); padding: 12px; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.05); }
+        .timer-display { font-size: 22px; font-weight: bold; color: var(--neon-green); }
+
+        /* Color & Size Buttons */
+        .bet-section-title { font-size: 12px; color: var(--gray-text); margin-bottom: 6px; font-weight: bold; }
+        .color-btns { display: flex; gap: 8px; margin-bottom: 10px; }
+        .color-btn { flex: 1; padding: 10px; border: none; border-radius: 8px; color: white; font-weight: bold; font-size: 12px; cursor: pointer; }
+        .bg-green { background: #10b981; }
+        .bg-violet { background: #8b5cf6; }
+        .bg-red { background: #ef4444; }
+
+        .size-btns { display: flex; gap: 8px; margin-bottom: 12px; }
+        .size-btn { flex: 1; padding: 10px; border: none; border-radius: 8px; color: white; font-weight: bold; font-size: 12px; cursor: pointer; }
+        .bg-big { background: #f97316; }
+        .bg-small { background: #06b6d4; }
+
+        /* Number Grid (0-9) */
+        .number-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 15px; }
+        .num-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 16px; font-weight: bold; padding: 10px; border-radius: 10px; cursor: pointer; text-align: center; }
+        .num-btn:hover { border-color: var(--accent-yellow); color: var(--accent-yellow); }
+
+        .chip-selector { display: flex; gap: 6px; margin-bottom: 12px; }
+        .chip-btn { flex: 1; background: #1e293b; color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; text-align: center; }
+        .chip-btn.active { background: var(--accent-yellow); color: #000; border-color: var(--accent-yellow); }
+
+        .custom-input { width: 100%; padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; text-align: center; font-size: 13px; margin-bottom: 12px; outline: none; }
+
+        .submit-bet-btn { width: 100%; background: var(--neon-green); color: #000; font-weight: bold; font-size: 14px; padding: 12px; border: none; border-radius: 10px; cursor: pointer; margin-bottom: 15px; }
+
+        /* History Table */
+        .history-box { background: var(--card-dark); border-radius: 14px; padding: 12px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); }
+        .history-header { font-size: 12px; font-weight: bold; color: var(--accent-yellow); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .history-table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }
+        .history-table th { color: var(--gray-text); padding: 6px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .history-table td { padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        
+        .badge { padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 10px; color: white; display: inline-block; }
+        .badge-big { background: #f97316; }
+        .badge-small { background: #06b6d4; }
+        .badge-green { background: #10b981; }
+        .badge-red { background: #ef4444; }
+        .badge-violet { background: #8b5cf6; }
+
+        .toggle-more-btn { width: 100%; background: rgba(255,255,255,0.05); color: var(--neon-blue); border: 1px dashed var(--neon-blue); padding: 8px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; margin-top: 8px; }
+
+        /* Floating Corner Button for User History */
+        .open-history-trigger-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            color: var(--accent-yellow);
+            border: 1px solid var(--accent-yellow);
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        /* User History Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            padding: 15px;
+        }
+
+        .user-history-modal {
+            background: #0f172a;
+            border-radius: 14px;
+            padding: 15px;
+            width: 100%;
+            max-width: 440px;
+            border: 1px solid var(--accent-yellow);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+        }
+
+        .modal-close-btn {
+            background: #ef4444;
+            color: #fff;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .filter-btn-group { display: flex; gap: 4px; }
+        .filter-btn { padding: 3px 8px; font-size: 10px; border-radius: 6px; background: rgba(255,255,255,0.1); color: #fff; border: none; cursor: pointer; }
+        .filter-btn.active { background: var(--accent-yellow); color: #000; font-weight: bold; }
+
+        .win-text { color: #10b981; font-weight: bold; }
+        .loss-text { color: #ef4444; font-weight: bold; }
+
+        /* Toast Popup */
+        .toast-msg {
+            position: fixed;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 9999;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            display: none;
+            text-align: center;
+            border: 1px solid var(--accent-yellow);
+        }
+        .toast-win { border-color: var(--neon-green); color: var(--neon-green); }
+        .toast-loss { border-color: var(--primary-red); color: var(--primary-red); }
+    </style>
+
+    <!-- Firebase SDKs (v9 Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<div id="toast-box" class="toast-msg"></div>
+
+<div class="main-container">
+    <!-- बैनर -->
+    <div class="banner-bar">
+        <div class="banner-title">🎮 Win Go Pro (Game 1)</div>
+        <a href="index.html" class="back-home-btn">🏠 होम</a>
+    </div>
+
+    <!-- टाइम टैब्स -->
+    <div class="time-tabs">
+        <div class="time-tab active" onclick="switchTimeMode(30, this)">⚡ 30 से.</div>
+        <div class="time-tab" onclick="switchTimeMode(60, this)">⏱️ 1 मि.</div>
+        <div class="time-tab" onclick="switchTimeMode(120, this)">⏱️ 2 मि.</div>
+        <div class="time-tab" onclick="switchTimeMode(180, this)">⏱️ 3 मि.</div>
+    </div>
+
+    <!-- मुख्य वॉलेट बैलेंस -->
+    <div class="wallet-card">
+        <div style="font-size:12px; color:var(--gray-text);">वर्तमान वॉलेट बैलेंस</div>
+        <div class="wallet-amount">₹<span id="user-balance">0.00</span></div>
+    </div>
+
+    <!-- टाइमर एवं पीरियड -->
+    <div class="game-status-card">
+        <div>
+            <div style="font-size:10px; color:var(--gray-text);">पीरियड नंबर (<span id="mode-label-small">30s</span>)</div>
+            <div style="font-size:14px; font-weight:bold; color:var(--accent-yellow);" id="period-display">2026000001</div>
+        </div>
+        <div style="text-align:right;">
+            <div style="font-size:10px; color:var(--gray-text);">काउंटडाउन</div>
+            <div class="timer-display" id="timer-display">00:30</div>
+        </div>
+    </div>
+
+    <!-- बेटिंग सेक्शन: कलर एवं साइज़ -->
+    <div class="bet-section-title">🎨 रंग या साइज़ चुनें (2X रिटर्न):</div>
+    <div class="color-btns">
+        <button class="color-btn bg-green" onclick="selectBet('GREEN', 'color')">हरा</button>
+        <button class="color-btn bg-violet" onclick="selectBet('VIOLET', 'color')">बैंगनी</button>
+        <button class="color-btn bg-red" onclick="selectBet('RED', 'color')">लाल</button>
+    </div>
+    <div class="size-btns">
+        <button class="size-btn bg-big" onclick="selectBet('BIG', 'size')">बड़ा (BIG 5-9)</button>
+        <button class="size-btn bg-small" onclick="selectBet('SMALL', 'size')">छोटा (SMALL 0-4)</button>
+    </div>
+
+    <!-- बेटिंग सेक्शन: 0-9 नंबर (9X रिटर्न) -->
+    <div class="bet-section-title">🔢 नंबर चुनें (9X रिटर्न):</div>
+    <div class="number-grid">
+        <div class="num-btn" onclick="selectBet(0, 'number')">0</div>
+        <div class="num-btn" onclick="selectBet(1, 'number')">1</div>
+        <div class="num-btn" onclick="selectBet(2, 'number')">2</div>
+        <div class="num-btn" onclick="selectBet(3, 'number')">3</div>
+        <div class="num-btn" onclick="selectBet(4, 'number')">4</div>
+        <div class="num-btn" onclick="selectBet(5, 'number')">5</div>
+        <div class="num-btn" onclick="selectBet(6, 'number')">6</div>
+        <div class="num-btn" onclick="selectBet(7, 'number')">7</div>
+        <div class="num-btn" onclick="selectBet(8, 'number')">8</div>
+        <div class="num-btn" onclick="selectBet(9, 'number')">9</div>
+    </div>
+
+    <!-- बेट चिप्स एवं राशि -->
+    <div class="chip-selector">
+        <div class="chip-btn active" onclick="setBetAmount(10, this)">₹10</div>
+        <div class="chip-btn" onclick="setBetAmount(50, this)">₹50</div>
+        <div class="chip-btn" onclick="setBetAmount(100, this)">₹100</div>
+        <div class="chip-btn" onclick="setBetAmount(500, this)">₹500</div>
+    </div>
+    <input type="number" id="custom-bet-input" class="custom-input" value="10" placeholder="कस्टम बेट राशि दर्ज करें" oninput="updateCustomAmount()">
+
+    <div id="selection-summary" style="text-align:center; font-size:11px; color:var(--accent-yellow); margin-bottom:8px; display:none;">
+        चुना गया: <b id="summary-target">-</b> | राशि: ₹<b id="summary-amount">10</b>
+    </div>
+
+    <button class="submit-bet-btn" onclick="placeBet()">🚀 बेट लगाएँ</button>
+
+    <!-- खिलाड़ी की छिपी बेट हिस्ट्री देखने का बटन -->
+    <button class="open-history-trigger-btn" onclick="toggleUserHistoryModal(true)">
+        📜 आपकी हालिया जीत/हार हिस्ट्री (10 रिकॉर्ड्स)
+    </button>
+
+    <!-- 10 दिखने वाली + 10 छिपी परिणाम हिस्ट्री -->
+    <div class="history-box">
+        <div class="history-header">
+            <span>📊 हालिया परिणाम (<span id="mode-title-display">30 से.</span>)</span>
+            <span style="font-size:10px; color:var(--gray-text);">ऑटो-अपडेटेड 24x7</span>
+        </div>
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>पीरियड</th>
+                    <th>नंबर</th>
+                    <th>साइज़</th>
+                    <th>रंग</th>
+                </tr>
+            </thead>
+            <tbody id="game-history-tbody">
+                <!-- जावास्क्रिप्ट द्वारा भरी जाएगी -->
+            </tbody>
+        </table>
+        <button class="toggle-more-btn" id="toggleMoreBtn" onclick="toggleExtraHistory()">👁️ और पुरानी 10 हिस्ट्री देखें</button>
+    </div>
+</div>
+
+<!-- खिलाड़ी की व्यक्तिगत बेट जीत/हार हिस्ट्री (पॉपअप/मोडल) -->
+<div class="modal-overlay" id="userHistoryModal">
+    <div class="user-history-modal">
+        <div class="history-header">
+            <span>📜 आपकी बेट हिस्ट्री (Top 10)</span>
+            <button class="modal-close-btn" onclick="toggleUserHistoryModal(false)">✕ बंद करें</button>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <span style="font-size:11px; color:var(--gray-text);" id="user-hist-mode-title">30 से. मोड</span>
+            <div class="filter-btn-group">
+                <button class="filter-btn active" onclick="filterUserHistory('ALL', this)">सब</button>
+                <button class="filter-btn" onclick="filterUserHistory('WIN', this)">जीत</button>
+                <button class="filter-btn" onclick="filterUserHistory('LOSS', this)">हार</button>
+            </div>
+        </div>
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>समय</th>
+                    <th>बेट</th>
+                    <th>राशि</th>
+                    <th>परिणाम</th>
+                </tr>
+            </thead>
+            <tbody id="user-my-history-tbody">
+                <!-- केवल 10 रिकॉर्ड्स यहाँ दिखेंगे -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDUMcJly0ar9hjS8mmkZKizF9fZgwvTz_E",
+      authDomain: "double-bang-game.firebaseapp.com",
+      databaseURL: "https://double-bang-game-default-rtdb.firebaseio.com",
+      projectId: "double-bang-game",
+      storageBucket: "double-bang-game.firebasestorage.app",
+      messagingSenderId: "1022652972426",
+      appId: "1:1022652972426:web:ff7ba6bb61f5a7a78a1c73",
+      measurementId: "G-QKXH27RQQS"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+
+    let currentUser = localStorage.getItem('game_current_user');
+    let currentUserData = {
+        balance: 0.00,
+        myGameBets: []
+    };
+    let allUsersData = {};
+
+    let currentDuration = 30;
+    let activeSelection = null;
+    let activeSelectionType = null;
+    let betAmount = 10;
+    let showExtraHistory = false;
+    let currentHistoryFilter = 'ALL';
+
+    let globalGameHistories = {
+        30: [], 60: [], 120: [], 180: []
+    };
+
+    function updateUIBalance() {
+        let balElement = document.getElementById('user-balance');
+        if (balElement) {
+            let currentBal = parseFloat(currentUserData.balance) || 0;
+            balElement.innerText = currentBal.toFixed(2);
+        }
+    }
+
+    function showToast(message, type = 'normal') {
+        let toast = document.getElementById('toast-box');
+        toast.className = 'toast-msg';
+        if (type === 'win') toast.classList.add('toast-win');
+        else if (type === 'loss') toast.classList.add('toast-loss');
+
+        toast.innerText = message;
+        toast.style.display = 'block';
+
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, 1200);
+    }
+
+    // Modal Control Functions
+    function toggleUserHistoryModal(show) {
+        let modal = document.getElementById('userHistoryModal');
+        if(modal) {
+            modal.style.display = show ? 'flex' : 'none';
+        }
+    }
+
+    // --- 24/7 ऑटोमैटिक बैकग्राउंड हिस्ट्री जनरेटर ---
+    function syncBackgroundHistory(duration) {
+        let currentPeriod = calculatePeriod(duration);
+        let list = globalGameHistories[duration] || [];
+        
+        let lastKnownPeriod = (list.length > 0) ? list[0].period : (currentPeriod - 21);
+        let missingCount = currentPeriod - 1 - lastKnownPeriod;
+
+        if (missingCount > 0) {
+            let newItems = [];
+            let startPeriod = currentPeriod - 1;
+            
+            for (let p = startPeriod; p > lastKnownPeriod && newItems.length + list.length < 20; p--) {
+                let num = Math.floor(Math.random() * 10);
+                let details = getDetailsByNumber(num);
+                newItems.push({
+                    period: p,
+                    number: num,
+                    size: details.size,
+                    color: details.color
+                });
+            }
+
+            globalGameHistories[duration] = [...newItems, ...list].slice(0, 20);
+            saveHistories();
+        }
+    }
+
+    function initGame() {
+        if (!currentUser) {
+            alert("कृपया मुख्य पृष्ठ से अपनी आईडी खोलें!");
+            window.location.href = "index.html";
+            return;
+        }
+
+        db.ref('users/' + currentUser).on('value', snapshot => {
+            let val = snapshot.val();
+            if (val) {
+                currentUserData.balance = parseFloat(val.balance || 0);
+                currentUserData.myGameBets = (val.myGameBets || []).slice(0, 10); // केवल 10 रिकॉर्ड रखें
+            } else {
+                currentUserData.balance = 0.00;
+                currentUserData.myGameBets = [];
+            }
+            updateUIBalance();
+            renderUserBetsHistory();
+        });
+
+        db.ref('users').on('value', snapshot => {
+            allUsersData = snapshot.val() || {};
+        });
+
+        db.ref('global_histories').on('value', snapshot => {
+            let histories = snapshot.val();
+            if (histories) {
+                globalGameHistories = histories;
+            }
+            
+            [30, 60, 120, 180].forEach(d => {
+                syncBackgroundHistory(d);
+            });
+
+            renderGameHistory();
+        });
+    }
+
+    function saveDB() {
+        if (currentUser) {
+            // डेटाबेस में केवल हालिया 10 रिकॉर्ड ही सेव होंगे
+            let trimmedBets = (currentUserData.myGameBets || []).slice(0, 10);
+            db.ref('users/' + currentUser).update({
+                balance: currentUserData.balance,
+                myGameBets: trimmedBets
+            });
+            updateUIBalance();
+        }
+    }
+
+    function saveHistories() {
+        db.ref('global_histories').set(globalGameHistories);
+    }
+
+    function switchTimeMode(seconds, element) {
+        currentDuration = seconds;
+        document.querySelectorAll('.time-tab').forEach(t => t.classList.remove('active'));
+        if (element) element.classList.add('active');
+
+        let titles = { 30: "30 से.", 60: "1 मि.", 120: "2 मि.", 180: "3 मि." };
+        document.getElementById('mode-title-display').innerText = titles[seconds];
+        document.getElementById('user-hist-mode-title').innerText = titles[seconds] + " मोड";
+        document.getElementById('mode-label-small').innerText = titles[seconds];
+
+        syncBackgroundHistory(seconds);
+        renderGameHistory();
+        renderUserBetsHistory();
+    }
+
+    function setBetAmount(amt, el) {
+        betAmount = amt;
+        document.getElementById('custom-bet-input').value = amt;
+        document.querySelectorAll('.chip-btn').forEach(c => c.classList.remove('active'));
+        if (el) el.classList.add('active');
+        updateSummary();
+    }
+
+    function updateCustomAmount() {
+        let val = parseFloat(document.getElementById('custom-bet-input').value);
+        if (!isNaN(val) && val > 0) {
+            betAmount = val;
+            updateSummary();
+        }
+    }
+
+    function selectBet(target, type) {
+        activeSelection = target;
+        activeSelectionType = type;
+        updateSummary();
+    }
+
+    function updateSummary() {
+        if (activeSelection !== null) {
+            document.getElementById('selection-summary').style.display = 'block';
+            document.getElementById('summary-target').innerText = activeSelection;
+            document.getElementById('summary-amount').innerText = betAmount;
+        }
+    }
+
+    function placeBet() {
+        if (!currentUser) {
+            showToast('⚠️ पहले लॉगिन करें!');
+            return;
+        }
+
+        if (activeSelection === null) {
+            showToast('⚠️ पहले रंग, साइज़ या नंबर चुनें!');
+            return;
+        }
+
+        if (currentUserData.balance < betAmount) {
+            showToast('❌ मुख्य वॉलेट में पर्याप्त बैलेंस नहीं है!');
+            return;
+        }
+
+        currentUserData.balance -= betAmount;
+        updateUIBalance();
+
+        let currentPeriod = calculatePeriod(currentDuration);
+
+        let betRecord = {
+            period: currentPeriod,
+            mode: currentDuration,
+            target: activeSelection,
+            type: activeSelectionType,
+            amount: betAmount,
+            status: "पेंडिंग",
+            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+            timestamp: Date.now()
+        };
+
+        if(!currentUserData.myGameBets) currentUserData.myGameBets = [];
+        currentUserData.myGameBets.unshift(betRecord);
+        
+        // केवल 10 नवीनतम रिकॉर्ड्स रखें, पुराने डिलीट
+        currentUserData.myGameBets = currentUserData.myGameBets.slice(0, 10);
+        
+        saveDB();
+        showToast(`✅ ₹${betAmount} की बेट लग गई!`);
+    }
+
+    function calculatePeriod(duration) {
+        let now = Math.floor(Date.now() / 1000);
+        let periodIndex = Math.floor(now / duration);
+        return 2026000000 + (periodIndex % 1000000);
+    }
+
+    function updateTimer() {
+        let now = Math.floor(Date.now() / 1000);
+        let remain = currentDuration - (now % currentDuration);
+
+        let mins = Math.floor(remain / 60);
+        let secs = remain % 60;
+        document.getElementById('timer-display').innerText = 
+            (mins < 10 ? "0" + mins : mins) + ":" + (secs < 10 ? "0" + secs : secs);
+
+        let currentPeriod = calculatePeriod(currentDuration);
+        document.getElementById('period-display').innerText = currentPeriod;
+
+        [30, 60, 120, 180].forEach(d => {
+            let r = d - (now % d);
+            if (r === d) {
+                processRoundEndingForDuration(d);
+            }
+        });
+    }
+
+    function getDetailsByNumber(num) {
+        let size = num >= 5 ? "BIG" : "SMALL";
+        let color = "GREEN";
+        if (num === 0 || num === 5) color = "VIOLET";
+        else if (num % 2 === 0) color = "RED";
+        return { size, color };
+    }
+
+    function checkBetWin(bet, numDetails, num) {
+        if (bet.type === 'number' && parseInt(bet.target) === num) return true;
+        if (bet.type === 'size' && bet.target === numDetails.size) return true;
+        if (bet.type === 'color' && (bet.target === numDetails.color || numDetails.color === "VIOLET")) return true;
+        return false;
+    }
+
+    function processRoundEndingForDuration(duration) {
+        let lastPeriod = calculatePeriod(duration) - 1;
+        let list = globalGameHistories[duration] || [];
+
+        if (list.length === 0 || list[0].period !== lastPeriod) {
+            let activeBets = [];
+            Object.keys(allUsersData).forEach(uKey => {
+                let u = allUsersData[uKey];
+                if (u.myGameBets) {
+                    u.myGameBets.forEach(b => {
+                        if (b.period == lastPeriod && b.mode == duration && b.status === "पेंडिंग") {
+                            activeBets.push(b);
+                        }
+                    });
+                }
+            });
+
+            let newNum = 0;
+
+            if (activeBets.length === 0) {
+                newNum = Math.floor(Math.random() * 10);
+            } else if (activeBets.length === 1) {
+                let singleBet = activeBets[0];
+                let losingNumbers = [];
+                for (let n = 0; n <= 9; n++) {
+                    let details = getDetailsByNumber(n);
+                    if (!checkBetWin(singleBet, details, n)) {
+                        losingNumbers.push(n);
+                    }
+                }
+                newNum = losingNumbers.length > 0 
+                    ? losingNumbers[Math.floor(Math.random() * losingNumbers.length)] 
+                    : Math.floor(Math.random() * 10);
+            } else {
+                let bestNumber = 0;
+                let minPayout = Infinity;
+                let numberCandidates = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].sort(() => Math.random() - 0.5);
+
+                numberCandidates.forEach(n => {
+                    let details = getDetailsByNumber(n);
+                    let currentPayout = 0;
+
+                    activeBets.forEach(b => {
+                        if (checkBetWin(b, details, n)) {
+                            let mult = (b.type === 'number') ? 9 : 2;
+                            currentPayout += (b.amount * mult);
+                        }
+                    });
+
+                    if (currentPayout < minPayout) {
+                        minPayout = currentPayout;
+                        bestNumber = n;
+                    }
+                });
+
+                newNum = bestNumber;
+            }
+
+            let finalDetails = getDetailsByNumber(newNum);
+
+            let newResult = {
+                period: lastPeriod,
+                number: newNum,
+                size: finalDetails.size,
+                color: finalDetails.color
+            };
+
+            list.unshift(newResult);
+            if (list.length > 20) list.pop();
+            globalGameHistories[duration] = list;
+            saveHistories();
+
+            if (duration === currentDuration) {
+                renderGameHistory();
+            }
+
+            checkUserBetsResult(lastPeriod, newResult, duration);
+        }
+    }
+
+    function checkUserBetsResult(period, result, duration) {
+        let updated = false;
+
+        if (currentUserData.myGameBets) {
+            currentUserData.myGameBets.forEach(bet => {
+                if (bet.period == period && bet.mode == duration && bet.status === "पेंडिंग") {
+                    let win = false;
+                    let multiplier = 2;
+
+                    if (bet.type === 'number' && parseInt(bet.target) === result.number) {
+                        win = true;
+                        multiplier = 9;
+                    } else if (bet.type === 'size' && bet.target === result.size) {
+                        win = true;
+                        multiplier = 2;
+                    } else if (bet.type === 'color' && (bet.target === result.color || result.color === "VIOLET")) {
+                        win = true;
+                        multiplier = 2;
+                    }
+
+                    if (win) {
+                        let totalWinning = bet.amount * multiplier;
+                        let gstAmount = totalWinning * 0.05;
+                        let netWin = totalWinning - gstAmount;
+
+                        currentUserData.balance += netWin;
+                        bet.status = `जीत (+₹${netWin.toFixed(1)})`;
+
+                        if (duration === currentDuration) {
+                            showToast(`🎉 आप ₹${netWin.toFixed(1)} जीत गए!`, 'win');
+                        }
+                    } else {
+                        bet.status = "हार";
+                        if (duration === currentDuration) {
+                            showToast(`❌ आप बेट हार गए!`, 'loss');
+                        }
+                    }
+                    updated = true;
+                }
+            });
+        }
+
+        if (updated) {
+            // नतीजे आने के बाद भी सिर्फ 10 रिकॉर्ड रखे जाएँगे
+            currentUserData.myGameBets = currentUserData.myGameBets.slice(0, 10);
+            saveDB();
+        }
+    }
+
+    function renderGameHistory() {
+        let list = globalGameHistories[currentDuration] || [];
+        let countToShow = showExtraHistory ? 20 : 10;
+        let visibleList = list.slice(0, countToShow);
+
+        let html = "";
+        visibleList.forEach(item => {
+            let sizeBadge = item.size === "BIG" ? `<span class="badge badge-big">BIG</span>` : `<span class="badge badge-small">SMALL</span>`;
+            let colorClass = item.color === "GREEN" ? "badge-green" : (item.color === "RED" ? "badge-red" : "badge-violet");
+            let colorBadge = `<span class="badge ${colorClass}">${item.color === 'GREEN'?'हरा':(item.color==='RED'?'लाल':'बैंगनी')}</span>`;
+
+            html += `<tr>
+                <td>${item.period}</td>
+                <td style="font-size:13px; font-weight:bold;">${item.number}</td>
+                <td>${sizeBadge}</td>
+                <td>${colorBadge}</td>
+            </tr>`;
+        });
+
+        document.getElementById('game-history-tbody').innerHTML = html || `<tr><td colspan="4">हिस्ट्री लोड हो रही है...</td></tr>`;
+    }
+
+    function toggleExtraHistory() {
+        showExtraHistory = !showExtraHistory;
+        document.getElementById('toggleMoreBtn').innerText = showExtraHistory ? "▲ कम हिस्ट्री देखें (10)" : "👁️ और पुरानी 10 हिस्ट्री देखें";
+        renderGameHistory();
+    }
+
+    function filterUserHistory(type, btn) {
+        currentHistoryFilter = type;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        renderUserBetsHistory();
+    }
+
+    function renderUserBetsHistory() {
+        let bets = currentUserData.myGameBets || [];
+        // केवल 10 हालिया रिकॉर्ड लें
+        bets = bets.slice(0, 10);
+
+        let modeBets = bets.filter(b => b.mode == currentDuration);
+
+        if (currentHistoryFilter === 'WIN') {
+            modeBets = modeBets.filter(b => b.status.includes('जीत'));
+        } else if (currentHistoryFilter === 'LOSS') {
+            modeBets = modeBets.filter(b => b.status === 'हार');
+        }
+
+        let html = "";
+        modeBets.forEach(b => {
+            let resClass = b.status.includes('जीत') ? 'win-text' : (b.status === 'हार' ? 'loss-text' : '');
+            html += `<tr>
+                <td>${b.time}</td>
+                <td><b>${b.target}</b></td>
+                <td>₹${b.amount}</td>
+                <td class="${resClass}">${b.status}</td>
+            </tr>`;
+        });
+
+        document.getElementById('user-my-history-tbody').innerHTML = html || `<tr><td colspan="4" style="color:var(--gray-text);">कोई रिकॉर्ड नहीं मिला।</td></tr>`;
+    }
+
+    setInterval(updateTimer, 1000);
+    window.onload = initGame;
+</script>
+</body>
+</html>
